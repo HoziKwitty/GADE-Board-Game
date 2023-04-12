@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.PlasticSCM.Editor.WebApi;
+using UnityEditor;
 using UnityEngine;
 
 public class GameBoard : MonoBehaviour
@@ -25,12 +26,13 @@ public class GameBoard : MonoBehaviour
     private Vector2Int mousePos;
     private Vector3 border;
     private BoardPieces[,] boardPieces;
+    private BoardPieces holding;
     private void Awake()
     {
         GenerateGrid(1, tileCount_X, tileCount_Y);
-
-        //GenerateSingleSquare(pieceType.Square, 0);
+        
         GenerateAllSquares();
+        PositionAll();
     }
 
     private void update()
@@ -45,6 +47,7 @@ public class GameBoard : MonoBehaviour
 
         RaycastHit info;
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        
         
         //checks if the raycast hits something
         if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse"))) 
@@ -66,6 +69,36 @@ public class GameBoard : MonoBehaviour
                 mousePos = hitPosition;
                 tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
             }
+            
+            //when the mouse button is pressed down
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (boardPieces[hitPosition.x, hitPosition.y] != null)
+                {
+                    //is it your turn?
+                    if (true)
+                    {
+                        holding = boardPieces[hitPosition.x, hitPosition.y];
+                    }
+                }
+            }
+            
+            //when the mouse button is released
+            if (holding != null && Input.GetMouseButtonDown(0))
+            {
+                Vector2Int previousPosition = new Vector2Int(holding.currentX, holding.currentY);
+
+                bool isValid = MoveTo(holding, hitPosition.x, hitPosition.y);
+                //moves the piece back if it cant be moved where you want
+                if (!isValid)
+                {
+                    holding.transform.position = findMiddle(previousPosition.x, previousPosition.y);
+                    holding = null;
+                }
+
+            }
+            
+            
         }
         else
         {
@@ -167,20 +200,45 @@ public class GameBoard : MonoBehaviour
         boardPieces[12, 5] = GenerateSingleSquare(pieceType.Square, 0);
         
         //black team
-        boardPieces[11, 4] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[11, 3] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[11, 2] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[11, 1] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[11, 0] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[12, 4] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[12, 3] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[12, 2] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[12, 1] = GenerateSingleSquare(pieceType.Square, 0);
-        boardPieces[12, 0] = GenerateSingleSquare(pieceType.Square, 0);
-
+        boardPieces[11, 4] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[11, 3] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[11, 2] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[11, 1] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[11, 0] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[12, 4] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[12, 3] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[12, 2] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[12, 1] = GenerateSingleSquare(pieceType.Square, 1);
+        boardPieces[12, 0] = GenerateSingleSquare(pieceType.Square, 1);
         
     }
 
+    
+    //Positioning
+    private void PositionAll()
+    {
+        for (int x = 0; x < tileCount_X; x++)
+        {
+            for (int y = 0; y < tileCount_X; y++)
+            {
+                if (boardPieces[x, y] != null)
+                {
+                    PositionSingle(x,y);
+                }
+                
+            }
+        }
+    }
+
+    private void PositionSingle(int x, int y)
+    {
+        boardPieces[x, y].currentX = x;
+        boardPieces[x, y].currentY = y;
+        boardPieces[x, y].transform.position = findMiddle(x, y);
+
+    }
+    
+    
     private BoardPieces GenerateSingleSquare(pieceType type, int team)
     {
         BoardPieces bp = Instantiate(prefabs[(int) type - 1], transform).GetComponent<BoardPieces>();
@@ -190,8 +248,22 @@ public class GameBoard : MonoBehaviour
 
         return bp;
     }
+
+    private Vector3 findMiddle(int x, int y)
+    {
+        return new Vector3(x * tileSize, yOffset, y * tileSize) - border + new Vector3(tileSize / 2, 0, tileSize / 2);
+    }
     
-    
+    private bool MoveTo(BoardPieces bp, int x, int y)
+    {
+        Vector2Int previousPosition = new Vector2Int(bp.currentX, bp.currentY);
+        boardPieces[x, y] = bp;
+        boardPieces[previousPosition.x, previousPosition.y] = null;
+        PositionSingle(x,y);
+
+        return true;
+
+    }
     
     
 }
