@@ -33,8 +33,8 @@ public class GameBoard : MonoBehaviour
     private BoardPieces[,] boardPieces;
     private BoardPieces holding;
 
-    private const string BLACK = "Player 1";
-    private const string WHITE = "Player 2";
+    private const string WHITE = "Player 1";
+    private const string BLACK = "Player 2";
     public string currentPlayer;
 
     private void Awake()
@@ -170,8 +170,8 @@ public class GameBoard : MonoBehaviour
     {
         boardPieces = new BoardPieces[tileCount_X, tileCount_Y];
 
-        int white = 0;
         int black = 1;
+        int white = 0;
 
         // White Team
         boardPieces[11, 9] = GenerateSingleSquare(pieceType.Square, white);
@@ -279,14 +279,18 @@ public class GameBoard : MonoBehaviour
         for (int i = 0; i < 10; i++)
         {
             // Checks vertically for a piece in line with itself
-            if (i != y && boardPieces[x, i] != null && CheckTeam(x, i))
+            if (i != y && 
+                boardPieces[x, i] != null &&
+                boardPieces[x, i].team == startCorner.team)
             {
                 firstFoundCorner = boardPieces[x, i];
 
                 // Checks horizontally for a piece in line with itself
                 for (int j = 0; j < 10; j++)
                 {
-                    if (boardPieces[x, y] != boardPieces[j, y] && boardPieces[j, y] != null && CheckTeam(j, y))
+                    if (boardPieces[x, y] != boardPieces[j, y] && 
+                        boardPieces[j, y] != null && 
+                        boardPieces[j, y].team == startCorner.team)
                     {
                         secondFoundCorner = boardPieces[j, y];
                     }
@@ -294,7 +298,9 @@ public class GameBoard : MonoBehaviour
 
                 for (int k = 0; k < 10; k++)
                 {
-                    if (boardPieces[x, i] != boardPieces[k, i] && boardPieces[k, i] != null && CheckTeam(k, y))
+                    if (boardPieces[x, i] != boardPieces[k, i] && 
+                        boardPieces[k, i] != null &&
+                        boardPieces[k, i].team == startCorner.team)
                     {
                         thirdFoundCorner = boardPieces[k, i];
                     }
@@ -332,33 +338,26 @@ public class GameBoard : MonoBehaviour
             }
         }
 
-        // DEBUG CODE
-        //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
-        //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
-        //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
-        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
-    }
-
-    private bool CheckTeam(int x, int y)
-    {
-        return (boardPieces[x, y].team == 0 && currentPlayer.Equals("Player 1")) ||
-                   (boardPieces[x, y].team == 1 && currentPlayer.Equals("Player 2"));
+        Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
+                firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
+                secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
+                thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
     }
 
     private void UpdateUI()
     {
-        if (currentPlayer.Equals("Player 1"))
-        {
-            currentPlayer = WHITE;
-            white.gameObject.SetActive(true);
-            black.gameObject.SetActive(false);
-        }
-        else
-        {
-            currentPlayer = BLACK;
-            white.gameObject.SetActive(false);
-            black.gameObject.SetActive(true);
-        }
+        //if (currentPlayer.Equals("Player 1"))
+        //{
+        //    currentPlayer = WHITE;
+        //    white.gameObject.SetActive(true);
+        //    black.gameObject.SetActive(false);
+        //}
+        //else
+        //{
+        //    currentPlayer = BLACK;
+        //    white.gameObject.SetActive(false);
+        //    black.gameObject.SetActive(true);
+        //}
     }
     #endregion
 
