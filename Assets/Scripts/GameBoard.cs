@@ -306,11 +306,9 @@ public class GameBoard : MonoBehaviour
         if (secondFoundCorner.currentX != -1 && secondFoundCorner.currentX == thirdFoundCorner.currentX)
         {
             // Calculate rectangle's score
-            float rectangleScore = 
+            float rectangleScore =
                 Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
                 Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
-
-            Debug.Log(rectangleScore);
 
             Rectangle created = new Rectangle(
                     new Vector2(startCorner.currentX, startCorner.currentY),
@@ -335,23 +333,16 @@ public class GameBoard : MonoBehaviour
         }
 
         // DEBUG CODE
-        //startCorner.currentX + "; " + startCorner.currentY + "\n" +
+        //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
         //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
         //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
-        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY;
+        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
     }
 
     private bool CheckTeam(int x, int y)
     {
-        if (boardPieces[x, y] != null)
-        {
-            return (boardPieces[x, y].team == 0 && currentPlayer.Equals("Player 1")) ||
+        return (boardPieces[x, y].team == 0 && currentPlayer.Equals("Player 1")) ||
                    (boardPieces[x, y].team == 1 && currentPlayer.Equals("Player 2"));
-        }
-        else
-        {
-            return false;
-        }
     }
 
     private void UpdateUI()
