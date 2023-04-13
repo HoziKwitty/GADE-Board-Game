@@ -104,6 +104,7 @@ public class GameBoard : MonoBehaviour
         }
     }
 
+    #region Startup
     private void GenerateGrid(float tileSize, int tileCountX, int tileCountY)
     {
         yOffset += transform.position.y;
@@ -122,6 +123,7 @@ public class GameBoard : MonoBehaviour
     private GameObject SpawnSingleTile(float tileSize, int x, int y)
     {
         GameObject tileObject = new GameObject(string.Format("X:{0}, Y:{1}", x, y));
+
         // Allows tiles to move when moving above GameObjects
         tileObject.transform.parent = transform; 
 
@@ -152,22 +154,6 @@ public class GameBoard : MonoBehaviour
         return tileObject;
     }
 
-    private Vector2Int CheckTile(GameObject raycastInfo)
-    {
-        for (int x = 0; x < tileCount_X; x++)
-        {
-            for (int y = 0; y < tileCount_Y; y++)
-            {
-                if (tiles[x,y] == raycastInfo)
-                {
-                    return new Vector2Int(x, y);
-                }
-            }
-        }
-
-        return -Vector2Int.one; 
-    }
-
     private void GenerateAllSquares()
     {
         boardPieces = new BoardPieces[tileCount_X, tileCount_Y];
@@ -186,7 +172,7 @@ public class GameBoard : MonoBehaviour
         boardPieces[12, 7] = GenerateSingleSquare(pieceType.Square, white);
         boardPieces[12, 6] = GenerateSingleSquare(pieceType.Square, white);
         boardPieces[12, 5] = GenerateSingleSquare(pieceType.Square, white);
-        
+
         // Black Team
         boardPieces[11, 4] = GenerateSingleSquare(pieceType.Square, black);
         boardPieces[11, 3] = GenerateSingleSquare(pieceType.Square, black);
@@ -198,7 +184,7 @@ public class GameBoard : MonoBehaviour
         boardPieces[12, 2] = GenerateSingleSquare(pieceType.Square, black);
         boardPieces[12, 1] = GenerateSingleSquare(pieceType.Square, black);
         boardPieces[12, 0] = GenerateSingleSquare(pieceType.Square, black);
-        
+
     }
 
     private void PositionAll()
@@ -215,8 +201,43 @@ public class GameBoard : MonoBehaviour
         }
     }
 
+    private BoardPieces GenerateSingleSquare(pieceType type, int team)
+    {
+        Vector3 targetPosition = new Vector3(transform.position.x, transform.position.y + 0.6f, transform.position.z);
+
+        BoardPieces bp = Instantiate(prefabs[(int)type - 1], transform).GetComponent<BoardPieces>();
+        bp.team = team;
+        bp.type = type;
+        bp.GetComponent<MeshRenderer>().material = teamMaterial[team];
+        bp.transform.position = targetPosition;
+
+        return bp;
+    }
+    #endregion
+
+    private Vector2Int CheckTile(GameObject raycastInfo)
+    {
+        for (int x = 0; x < tileCount_X; x++)
+        {
+            for (int y = 0; y < tileCount_Y; y++)
+            {
+                if (tiles[x,y] == raycastInfo)
+                {
+                    return new Vector2Int(x, y);
+                }
+            }
+        }
+
+        return -Vector2Int.one; 
+    }
+
     private void PositionSingle(int x, int y, bool hasMoved)
     {
+        if (boardPieces[x, y] == null)
+        {
+            return;
+        }
+
         boardPieces[x, y].currentX = x;
         boardPieces[x, y].currentY = y;
         boardPieces[x, y].transform.position = FindMiddle(x, y);
@@ -230,20 +251,8 @@ public class GameBoard : MonoBehaviour
                 );
         }
     }
-    
-    private BoardPieces GenerateSingleSquare(pieceType type, int team)
-    {
-        Vector3 targetPosition = new Vector3(transform.position.x, transform.position.y + 0.6f, transform.position.z);
 
-        BoardPieces bp = Instantiate(prefabs[(int) type - 1], transform).GetComponent<BoardPieces>();
-        bp.team = team;
-        bp.type = type;
-        bp.GetComponent<MeshRenderer>().material = teamMaterial[team];
-        bp.transform.position = targetPosition;
-
-        return bp;
-    }
-
+    #region Movement
     private Vector3 FindMiddle(int x, int y)
     {
         return new Vector3(x * tileSize, yOffset, y * tileSize) - border + new Vector3(tileSize / 2, 0, tileSize / 2);
@@ -258,4 +267,5 @@ public class GameBoard : MonoBehaviour
 
         return true;
     }
+    #endregion
 }
