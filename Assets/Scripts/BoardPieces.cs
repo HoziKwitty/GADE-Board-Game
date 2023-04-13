@@ -7,6 +7,7 @@ public enum pieceType
     None = 0,
     Square = 1
 }
+
 public class BoardPieces : MonoBehaviour
 {
     public pieceType type;
@@ -15,5 +16,4 @@ public class BoardPieces : MonoBehaviour
     public int currentY;
 
     private Vector3 desiredPosition;
-    
 }
