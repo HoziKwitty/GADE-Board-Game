@@ -1,9 +1,6 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using Unity.PlasticSCM.Editor.WebApi;
-using UnityEditor;
 using UnityEngine;
+using TMPro;
 
 public class GameBoard : MonoBehaviour
 {
@@ -13,10 +10,17 @@ public class GameBoard : MonoBehaviour
     [SerializeField] private float yOffset = 0.2f;
     [SerializeField] private Vector3 boardCenter = Vector3.zero;
 
-    [Header("Arrays")]
+    [Header("Logic")]
+    [SerializeField] private List<Rectangle> rectangles;
+
+    [Header("Display")]
     [SerializeField] private Material[] teamMaterial;
     [SerializeField] private GameObject[] prefabs;
-    
+    [SerializeField] private TextMeshProUGUI white;
+    [SerializeField] private TextMeshProUGUI black;
+    [SerializeField] private TextMeshProUGUI whiteScore;
+    [SerializeField] private TextMeshProUGUI blackScore;
+
     // LOGIC
     private const int tileCount_X = 13;
     private const int tileCount_Y = 10;
@@ -29,6 +33,10 @@ public class GameBoard : MonoBehaviour
     private BoardPieces[,] boardPieces;
     private BoardPieces holding;
 
+    private const string BLACK = "Player 1";
+    private const string WHITE = "Player 2";
+    public string currentPlayer;
+
     private void Awake()
     {
         mainCamera = Camera.main;
@@ -37,13 +45,14 @@ public class GameBoard : MonoBehaviour
         
         GenerateAllSquares();
         PositionAll();
+
+        currentPlayer = BLACK;
     }
 
     private void Update()
     {
         RaycastHit info;
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        
         
         // Checks if the raycast hits something
         if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse"))) 
@@ -71,11 +80,14 @@ public class GameBoard : MonoBehaviour
             {
                 if (boardPieces[hitPosition.x, hitPosition.y] != null)
                 {
+                    holding = boardPieces[hitPosition.x, hitPosition.y];
+
                     // Is it your turn?
-                    if (true)
-                    {
-                        holding = boardPieces[hitPosition.x, hitPosition.y];
-                    }
+                    //if ((currentPlayer.Equals(BLACK) && boardPieces[hitPosition.x, hitPosition.y].team == 1) ||
+                    //    (currentPlayer.Equals(WHITE) && boardPieces[hitPosition.x, hitPosition.y].team == 0))
+                    //{
+                    //    holding = boardPieces[hitPosition.x, hitPosition.y];
+                    //}
                 }
             }
             
@@ -215,6 +227,7 @@ public class GameBoard : MonoBehaviour
     }
     #endregion
 
+    #region Gameplay
     private Vector2Int CheckTile(GameObject raycastInfo)
     {
         for (int x = 0; x < tileCount_X; x++)
@@ -228,6 +241,7 @@ public class GameBoard : MonoBehaviour
             }
         }
 
+        // Catch statement
         return -Vector2Int.one; 
     }
 
@@ -242,15 +256,120 @@ public class GameBoard : MonoBehaviour
         boardPieces[x, y].currentY = y;
         boardPieces[x, y].transform.position = FindMiddle(x, y);
 
+        // Player has moved a piece
         if (hasMoved)
         {
-            boardPieces[x, y].transform.position = new Vector3(
-                boardPieces[x, y].transform.position.x,
-                boardPieces[x, y].transform.position.y + 0.6f,
-                boardPieces[x, y].transform.position.z
-                );
+            Vector3 previousPosition = boardPieces[x, y].transform.position;
+            previousPosition.y += 0.6f;
+
+            boardPieces[x, y].transform.position = previousPosition;
+
+            CheckForRectangle(x, y);
+            UpdateUI();
         }
     }
+
+    private void CheckForRectangle(int x, int y)
+    {
+        BoardPieces startCorner = boardPieces[x, y];
+        BoardPieces firstFoundCorner = new BoardPieces();
+        BoardPieces secondFoundCorner = new BoardPieces();
+        BoardPieces thirdFoundCorner = new BoardPieces();
+
+        for (int i = 0; i < 10; i++)
+        {
+            // Checks vertically for a piece in line with itself
+            if (i != y && boardPieces[x, i] != null && CheckTeam(x, i))
+            {
+                firstFoundCorner = boardPieces[x, i];
+
+                // Checks horizontally for a piece in line with itself
+                for (int j = 0; j < 10; j++)
+                {
+                    if (boardPieces[x, y] != boardPieces[j, y] && boardPieces[j, y] != null && CheckTeam(j, y))
+                    {
+                        secondFoundCorner = boardPieces[j, y];
+                    }
+                }
+
+                for (int k = 0; k < 10; k++)
+                {
+                    if (boardPieces[x, i] != boardPieces[k, i] && boardPieces[k, i] != null && CheckTeam(k, y))
+                    {
+                        thirdFoundCorner = boardPieces[k, i];
+                    }
+                }
+            }
+        }
+
+        // Final check to see that corners line up
+        if (secondFoundCorner.currentX != -1 && secondFoundCorner.currentX == thirdFoundCorner.currentX)
+        {
+            // Calculate rectangle's score
+            float rectangleScore = 
+                Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
+                Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
+
+            Debug.Log(rectangleScore);
+
+            Rectangle created = new Rectangle(
+                    new Vector2(startCorner.currentX, startCorner.currentY),
+                    new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
+                    new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
+                    new Vector2(thirdFoundCorner.currentX, thirdFoundCorner.currentY),
+                    rectangleScore,
+                    startCorner.team
+                    );
+
+            // Create new rectangle object with discovered coordinates
+            rectangles.Add(created);
+
+            if (startCorner.team == 1)
+            {
+                blackScore.text += "\n" + rectangleScore;
+            }
+            else if (startCorner.team == 0)
+            {
+                whiteScore.text += "\n" + rectangleScore;
+            }
+        }
+
+        // DEBUG CODE
+        //startCorner.currentX + "; " + startCorner.currentY + "\n" +
+        //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
+        //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
+        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY;
+    }
+
+    private bool CheckTeam(int x, int y)
+    {
+        if (boardPieces[x, y] != null)
+        {
+            return (boardPieces[x, y].team == 0 && currentPlayer.Equals("Player 1")) ||
+                   (boardPieces[x, y].team == 1 && currentPlayer.Equals("Player 2"));
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private void UpdateUI()
+    {
+        if (currentPlayer.Equals("Player 1"))
+        {
+            currentPlayer = WHITE;
+            white.gameObject.SetActive(true);
+            black.gameObject.SetActive(false);
+        }
+        else
+        {
+            currentPlayer = BLACK;
+            white.gameObject.SetActive(false);
+            black.gameObject.SetActive(true);
+        }
+    }
+    #endregion
 
     #region Movement
     private Vector3 FindMiddle(int x, int y)

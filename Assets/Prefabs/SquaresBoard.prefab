@@ -24,7 +24,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2429251550634059350}
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.89, y: -0.34, z: -1.13}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
@@ -48,11 +48,16 @@ MonoBehaviour:
   tileSize: 1
   yOffset: 0.2
   boardCenter: {x: 0, y: 0, z: 0}
+  rectangles: []
   teamMaterial:
   - {fileID: 2100000, guid: 4c57f93859abf0a4bb347072f1ddeddc, type: 2}
   - {fileID: 2100000, guid: 9a0fa5cf60e75434c82c5488ca147ee6, type: 2}
   prefabs:
   - {fileID: 4578695624865396489, guid: de4750d038c11d44c82d79034fb47acc, type: 3}
+  white: {fileID: 0}
+  black: {fileID: 0}
+  coords: {fileID: 0}
+  currentPlayer: 
 --- !u!1 &6646086589480918671
 GameObject:
   m_ObjectHideFlags: 0
@@ -65,7 +70,7 @@ GameObject:
   - component: {fileID: 746089731196155134}
   - component: {fileID: 4287178945115213930}
   m_Layer: 0
-  m_Name: default
+  m_Name: Default Layout
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

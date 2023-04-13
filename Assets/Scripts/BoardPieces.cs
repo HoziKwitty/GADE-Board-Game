@@ -16,4 +16,10 @@ public class BoardPieces : MonoBehaviour
     public int currentY;
 
     private Vector3 desiredPosition;
+
+    public BoardPieces()
+    {
+        currentX = -1;
+        currentY = -1;
+    }
 }
