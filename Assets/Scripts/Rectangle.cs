@@ -13,7 +13,7 @@ public class Rectangle : MonoBehaviour
 
     public float score = 0;
 
-    int team = -1;
+    public int team = -1;
 
     public void Create(Vector2 corner1, Vector2 corner2, Vector2 corner3, Vector2 corner4, float score, int team)
     {

@@ -14,13 +14,18 @@ public class GameBoard : MonoBehaviour
     [SerializeField] private List<Rectangle> rectangles;
     [SerializeField] private GameObject rectangleObject;
 
-    [Header("Display")]
+    [Header("In-Game Display")]
     [SerializeField] private Material[] teamMaterial;
     [SerializeField] private GameObject[] prefabs;
     [SerializeField] private TextMeshProUGUI white;
     [SerializeField] private TextMeshProUGUI black;
     [SerializeField] private TextMeshProUGUI whiteScore;
     [SerializeField] private TextMeshProUGUI blackScore;
+
+    [Header("Results Display")]
+    [SerializeField] private GameObject resultsScreen;
+    [SerializeField] private TextMeshProUGUI whiteResult;
+    [SerializeField] private TextMeshProUGUI blackResult;
 
     // LOGIC
     private const int tileCount_X = 13;
@@ -51,12 +56,12 @@ public class GameBoard : MonoBehaviour
         PositionAll();
 
         currentPlayer = BLACK;
-
-        ray = mainCamera.ScreenPointToRay(Input.mousePosition);
     }
 
     private void Update()
-    {        
+    {
+        ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+
         // Checks if the raycast hits something
         if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse"))) 
         {
@@ -338,6 +343,11 @@ public class GameBoard : MonoBehaviour
             }
         }
 
+        if (CheckForGameEnd())
+        {
+            EndGame();
+        }
+
         // DEBUG CODE
         //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
         //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
@@ -360,6 +370,50 @@ public class GameBoard : MonoBehaviour
             black.gameObject.SetActive(true);
         }
     }
+
+    private bool CheckForGameEnd()
+    {
+        for (int i = 11; i < 13; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                if (boardPieces[i, j] != null)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void EndGame()
+    {
+        resultsScreen.SetActive(true);
+
+        whiteResult.text = whiteScore.text;
+        whiteResult.text += "\n\nFinal Score:\n" + CalculateFinalScore(false);
+
+        blackResult.text = blackScore.text;
+        blackResult.text += "\n\nFinal Score:\n" + CalculateFinalScore(true);
+
+        Time.timeScale = 0f;
+    }
+
+    private float CalculateFinalScore(bool isBlack)
+    {
+        float returnScore = 0f;
+
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            if ((rectangles[i].team == 1 && isBlack) || (rectangles[i].team == 0 && !isBlack))
+            {
+                returnScore += rectangles[i].score;
+            }
+        }
+
+        return returnScore;
+    }
     #endregion
 
     #region Movement
@@ -370,8 +424,6 @@ public class GameBoard : MonoBehaviour
     
     private bool MoveTo(BoardPieces bp, int x, int y)
     {
-        Debug.Log("Triggered");
-
         Vector2Int previousPosition = new Vector2Int(bp.currentX, bp.currentY);
         boardPieces[x, y] = bp;
         boardPieces[previousPosition.x, previousPosition.y] = null;
