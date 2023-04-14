@@ -49,6 +49,8 @@ MonoBehaviour:
   yOffset: 0.2
   boardCenter: {x: 0, y: 0, z: 0}
   rectangles: []
+  rectangleObject: {fileID: 0}
+  tempRectangleObject: {fileID: 0}
   teamMaterial:
   - {fileID: 2100000, guid: 4c57f93859abf0a4bb347072f1ddeddc, type: 2}
   - {fileID: 2100000, guid: 9a0fa5cf60e75434c82c5488ca147ee6, type: 2}
@@ -56,7 +58,11 @@ MonoBehaviour:
   - {fileID: 4578695624865396489, guid: de4750d038c11d44c82d79034fb47acc, type: 3}
   white: {fileID: 0}
   black: {fileID: 0}
-  coords: {fileID: 0}
+  whiteScore: {fileID: 0}
+  blackScore: {fileID: 0}
+  resultsScreen: {fileID: 0}
+  whiteResult: {fileID: 0}
+  blackResult: {fileID: 0}
   currentPlayer: 
 --- !u!1 &6646086589480918671
 GameObject:

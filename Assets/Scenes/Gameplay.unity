@@ -436,8 +436,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -671.1563}
-  m_SizeDelta: {x: 160, y: 330}
+  m_AnchoredPosition: {x: 212, y: -191}
+  m_SizeDelta: {x: 160, y: 715}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &534150003
 MonoBehaviour:
@@ -1515,8 +1515,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -286}
-  m_SizeDelta: {x: 160, y: 330}
+  m_AnchoredPosition: {x: 50, y: -191}
+  m_SizeDelta: {x: 160, y: 715}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1510876677
 MonoBehaviour:
@@ -2088,10 +2088,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 98665600}
     - target: {fileID: 8229693204822698067, guid: ef812d7344cd83b4dbff7e3ccda4e5a7, type: 3}
-      propertyPath: coords
-      value: 
-      objectReference: {fileID: 1894437603}
-    - target: {fileID: 8229693204822698067, guid: ef812d7344cd83b4dbff7e3ccda4e5a7, type: 3}
       propertyPath: blackScore
       value: 
       objectReference: {fileID: 2062144014}
@@ -2115,5 +2111,9 @@ PrefabInstance:
       propertyPath: rectangleObject
       value: 
       objectReference: {fileID: 1847461308}
+    - target: {fileID: 8229693204822698067, guid: ef812d7344cd83b4dbff7e3ccda4e5a7, type: 3}
+      propertyPath: tempRectangleObject
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ef812d7344cd83b4dbff7e3ccda4e5a7, type: 3}

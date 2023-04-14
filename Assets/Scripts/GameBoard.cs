@@ -291,55 +291,67 @@ public class GameBoard : MonoBehaviour
                 // Checks horizontally for a piece in line with itself
                 for (int j = 0; j < 10; j++)
                 {
+                    // Checks horizontally in line with the starting corner
                     if (boardPieces[x, y] != boardPieces[j, y] && 
                         boardPieces[j, y] != null && 
                         boardPieces[j, y].team == startCorner.team)
                     {
                         secondFoundCorner = boardPieces[j, y];
                     }
-                }
 
-                for (int k = 0; k < 10; k++)
-                {
-                    if (boardPieces[x, i] != boardPieces[k, i] && 
-                        boardPieces[k, i] != null &&
-                        boardPieces[k, i].team == startCorner.team)
+                    // Check horizontally in line with the first valid corner found
+                    if (boardPieces[x, i] != boardPieces[j, i] &&
+                        boardPieces[j, i] != null &&
+                        boardPieces[j, i].team == startCorner.team)
                     {
-                        thirdFoundCorner = boardPieces[k, i];
+                        thirdFoundCorner = boardPieces[j, i];
+                    }
+
+                    // Final check to see that corners line up
+                    if (secondFoundCorner.currentX != -1 && secondFoundCorner.currentX == thirdFoundCorner.currentX)
+                    {
+                        // Calculate rectangle's score
+                        float rectangleScore =
+                            Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
+                            Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
+
+                        // Create new rectangle based on calculated parameters
+                        Rectangle newRect = rectangleObject.AddComponent<Rectangle>();
+                        newRect.Create(
+                                new Vector2(startCorner.currentX, startCorner.currentY),
+                                new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
+                                new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
+                                new Vector2(thirdFoundCorner.currentX, thirdFoundCorner.currentY),
+                                rectangleScore,
+                                startCorner.team
+                                );
+
+                        // Create new rectangle object with discovered coordinates
+                        Rectangle[] storage = rectangleObject.GetComponents<Rectangle>();
+
+                        // Check that the rectangle hasn't been found before
+                        if (!CheckForDuplicate(newRect))
+                        {
+                            rectangles.Add(storage[storage.Length - 1]);
+
+                            // Update in-game score displays
+                            if (startCorner.team == 1)
+                            {
+                                blackScore.text += "\n" + rectangleScore;
+                            }
+                            else if (startCorner.team == 0)
+                            {
+                                whiteScore.text += "\n" + rectangleScore;
+                            }
+
+                            //DEBUG CODE
+                            //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
+                            //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
+                            //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
+                            //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
+                        }
                     }
                 }
-            }
-        }
-
-        // Final check to see that corners line up
-        if (secondFoundCorner.currentX != -1 && secondFoundCorner.currentX == thirdFoundCorner.currentX)
-        {
-            // Calculate rectangle's score
-            float rectangleScore =
-                Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
-                Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
-
-            Rectangle created = rectangleObject.AddComponent<Rectangle>();
-            created.Create(
-                    new Vector2(startCorner.currentX, startCorner.currentY),
-                    new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
-                    new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
-                    new Vector2(thirdFoundCorner.currentX, thirdFoundCorner.currentY),
-                    rectangleScore,
-                    startCorner.team
-                    );
-
-            // Create new rectangle object with discovered coordinates
-            Rectangle[] storage = rectangleObject.GetComponents<Rectangle>();
-            rectangles.Add(storage[storage.Length - 1]);
-
-            if (startCorner.team == 1)
-            {
-                blackScore.text += "\n" + rectangleScore;
-            }
-            else if (startCorner.team == 0)
-            {
-                whiteScore.text += "\n" + rectangleScore;
             }
         }
 
@@ -347,12 +359,33 @@ public class GameBoard : MonoBehaviour
         {
             EndGame();
         }
+    }
 
-        // DEBUG CODE
-        //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
-        //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
-        //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
-        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
+    private bool CheckForDuplicate(Rectangle rect)
+    {
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            if (Equals(rect, rectangles[i]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool Equals(Rectangle rect1, Rectangle rect2)
+    {
+        if (rect1.corner1 == rect2.corner1 &&
+            rect1.corner2 == rect2.corner2 &&
+            rect1.corner3 == rect2.corner3 &&
+            rect1.corner4 == rect2.corner4)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     private void UpdateCurrentPlayer()
