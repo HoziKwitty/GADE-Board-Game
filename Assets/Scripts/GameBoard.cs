@@ -355,10 +355,87 @@ public class GameBoard : MonoBehaviour
             }
         }
 
+        CheckForBlocks();
+
         if (CheckForGameEnd())
         {
             EndGame();
         }
+    }
+
+    private void CheckForBlocks()
+    {
+        float min;
+        float max;
+        float y;
+        float x;
+
+        // DEBUG REFERENCE
+        // 1 -> 2 X   3 -> 4 X  1 -> 3 Y  2 -> 4 Y
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            max = Mathf.Max(rectangles[i].corner1.x, rectangles[i].corner2.x);
+            min = Mathf.Min(rectangles[i].corner1.x, rectangles[i].corner2.x);
+            y = rectangles[i].corner1.y;
+            if (CheckForEdgeBlock(rectangles[i], y, 0f, min, max, false))
+            {
+                rectangles[i].isBlocked = true;
+                Debug.Log(rectangles[i].isBlocked);
+                break;
+            }
+
+            max = Mathf.Max(rectangles[i].corner3.x, rectangles[i].corner4.x);
+            min = Mathf.Min(rectangles[i].corner3.x, rectangles[i].corner4.x);
+            y = rectangles[i].corner3.y;
+            if (CheckForEdgeBlock(rectangles[i], y, 0f, min, max, false))
+            {
+                rectangles[i].isBlocked = true;
+                Debug.Log(rectangles[i].isBlocked);
+                break;
+            }
+
+            max = Mathf.Max(rectangles[i].corner1.y, rectangles[i].corner3.y);
+            min = Mathf.Min(rectangles[i].corner1.x, rectangles[i].corner3.y);
+            x = rectangles[i].corner1.x;
+            if (CheckForEdgeBlock(rectangles[i], 0f, x, min, max, true))
+            {
+                rectangles[i].isBlocked = true;
+                Debug.Log(rectangles[i].isBlocked);
+                break;
+            }
+
+            max = Mathf.Max(rectangles[i].corner2.y, rectangles[i].corner4.y);
+            min = Mathf.Min(rectangles[i].corner2.x, rectangles[i].corner4.y);
+            x = rectangles[i].corner2.x;
+            if (CheckForEdgeBlock(rectangles[i], 0f, x, min, max, true))
+            {
+                rectangles[i].isBlocked = true;
+                Debug.Log(rectangles[i].isBlocked);
+                break;
+            }
+        }
+    }
+
+    private bool CheckForEdgeBlock(Rectangle rect, float x, float y, float min, float max, bool isHorizontal)
+    {
+        for (float j = min + 1; j < max; j++)
+        {
+            if (isHorizontal)
+            {
+                if (boardPieces[(int)x, (int)j] != null && boardPieces[(int)x, (int)j].team != rect.team)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (boardPieces[(int)j, (int)y] != null && boardPieces[(int)j, (int)y].team != rect.team)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private bool CheckForDuplicate(Rectangle rect)
