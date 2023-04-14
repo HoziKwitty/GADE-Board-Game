@@ -374,43 +374,43 @@ public class GameBoard : MonoBehaviour
         // 1 -> 2 X   3 -> 4 X  1 -> 3 Y  2 -> 4 Y
         for (int i = 0; i < rectangles.Count; i++)
         {
-            max = Mathf.Max(rectangles[i].corner1.x, rectangles[i].corner2.x);
-            min = Mathf.Min(rectangles[i].corner1.x, rectangles[i].corner2.x);
+            max = Mathf.Max(rectangles[i].corner1.y, rectangles[i].corner2.y);
+            min = Mathf.Min(rectangles[i].corner1.y, rectangles[i].corner2.y);
             y = rectangles[i].corner1.y;
-            if (CheckForEdgeBlock(rectangles[i], y, 0f, min, max, false))
+            if (CheckForEdgeBlock(rectangles[i], 0f, y, min, max, true))
             {
                 rectangles[i].isBlocked = true;
-                Debug.Log(rectangles[i].isBlocked);
+                ConvertToBlockedScore(rectangles[i]);
                 break;
             }
 
-            max = Mathf.Max(rectangles[i].corner3.x, rectangles[i].corner4.x);
-            min = Mathf.Min(rectangles[i].corner3.x, rectangles[i].corner4.x);
+            max = Mathf.Max(rectangles[i].corner3.y, rectangles[i].corner4.y);
+            min = Mathf.Min(rectangles[i].corner3.y, rectangles[i].corner4.y);
             y = rectangles[i].corner3.y;
-            if (CheckForEdgeBlock(rectangles[i], y, 0f, min, max, false))
+            if (CheckForEdgeBlock(rectangles[i], 0f, y, min, max, true))
             {
                 rectangles[i].isBlocked = true;
-                Debug.Log(rectangles[i].isBlocked);
+                ConvertToBlockedScore(rectangles[i]);
                 break;
             }
 
-            max = Mathf.Max(rectangles[i].corner1.y, rectangles[i].corner3.y);
-            min = Mathf.Min(rectangles[i].corner1.x, rectangles[i].corner3.y);
+            max = Mathf.Max(rectangles[i].corner1.x, rectangles[i].corner3.x);
+            min = Mathf.Min(rectangles[i].corner1.x, rectangles[i].corner3.x);
             x = rectangles[i].corner1.x;
-            if (CheckForEdgeBlock(rectangles[i], 0f, x, min, max, true))
+            if (CheckForEdgeBlock(rectangles[i], x, 0f, min, max, false))
             {
                 rectangles[i].isBlocked = true;
-                Debug.Log(rectangles[i].isBlocked);
+                ConvertToBlockedScore(rectangles[i]);
                 break;
             }
 
-            max = Mathf.Max(rectangles[i].corner2.y, rectangles[i].corner4.y);
-            min = Mathf.Min(rectangles[i].corner2.x, rectangles[i].corner4.y);
+            max = Mathf.Max(rectangles[i].corner2.x, rectangles[i].corner4.x);
+            min = Mathf.Min(rectangles[i].corner2.x, rectangles[i].corner4.x);
             x = rectangles[i].corner2.x;
-            if (CheckForEdgeBlock(rectangles[i], 0f, x, min, max, true))
+            if (CheckForEdgeBlock(rectangles[i], x, 0f, min, max, false))
             {
                 rectangles[i].isBlocked = true;
-                Debug.Log(rectangles[i].isBlocked);
+                ConvertToBlockedScore(rectangles[i]);
                 break;
             }
         }
@@ -418,24 +418,35 @@ public class GameBoard : MonoBehaviour
 
     private bool CheckForEdgeBlock(Rectangle rect, float x, float y, float min, float max, bool isHorizontal)
     {
+        BoardPieces piece;
+
         for (float j = min + 1; j < max; j++)
         {
             if (isHorizontal)
             {
-                if (boardPieces[(int)x, (int)j] != null && boardPieces[(int)x, (int)j].team != rect.team)
+                piece = boardPieces[(int)y, (int)j];
+                if (piece != null && piece.team != rect.team)
                 {
                     return true;
                 }
             }
             else
             {
-                if (boardPieces[(int)j, (int)y] != null && boardPieces[(int)j, (int)y].team != rect.team)
+                piece = boardPieces[(int)j, (int)x];
+                if (piece != null && piece.team != rect.team)
                 {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private void ConvertToBlockedScore(Rectangle rect)
+    {
+        float newScore = rect.score / 4f;
+        newScore = Mathf.Round(newScore);
+        rect.score = newScore;
     }
 
     private bool CheckForDuplicate(Rectangle rect)
@@ -501,10 +512,22 @@ public class GameBoard : MonoBehaviour
     {
         resultsScreen.SetActive(true);
 
-        whiteResult.text = whiteScore.text;
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            if (rectangles[i].team == 1)
+            {
+                whiteResult.text += rectangles[i].score + "\n";
+            }
+        }
         whiteResult.text += "\n\nFinal Score:\n" + CalculateFinalScore(false);
 
-        blackResult.text = blackScore.text;
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            if (rectangles[i].team == 0)
+            {
+                blackResult.text += rectangles[i].score + "\n";
+            }
+        }
         blackResult.text += "\n\nFinal Score:\n" + CalculateFinalScore(true);
 
         Time.timeScale = 0f;
