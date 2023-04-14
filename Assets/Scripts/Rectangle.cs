@@ -15,7 +15,7 @@ public class Rectangle : MonoBehaviour
 
     int team = -1;
 
-    public Rectangle(Vector2 corner1, Vector2 corner2, Vector2 corner3, Vector2 corner4, float score, int team)
+    public void Create(Vector2 corner1, Vector2 corner2, Vector2 corner3, Vector2 corner4, float score, int team)
     {
         this.corner1 = corner1;
         this.corner2 = corner2;

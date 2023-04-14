@@ -12,6 +12,7 @@ public class GameBoard : MonoBehaviour
 
     [Header("Logic")]
     [SerializeField] private List<Rectangle> rectangles;
+    [SerializeField] private GameObject rectangleObject;
 
     [Header("Display")]
     [SerializeField] private Material[] teamMaterial;
@@ -37,6 +38,9 @@ public class GameBoard : MonoBehaviour
     private const string BLACK = "Player 2";
     public string currentPlayer;
 
+    private RaycastHit info;
+    private Ray ray;
+
     private void Awake()
     {
         mainCamera = Camera.main;
@@ -47,13 +51,12 @@ public class GameBoard : MonoBehaviour
         PositionAll();
 
         currentPlayer = BLACK;
+
+        ray = mainCamera.ScreenPointToRay(Input.mousePosition);
     }
 
     private void Update()
-    {
-        RaycastHit info;
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        
+    {        
         // Checks if the raycast hits something
         if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse"))) 
         {
@@ -75,30 +78,25 @@ public class GameBoard : MonoBehaviour
                 tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
             }
             
-            // When the mouse button is pressed down
+            // Select with left click
             if (Input.GetMouseButtonDown(0))
             {
-                if (boardPieces[hitPosition.x, hitPosition.y] != null)
+                if (boardPieces[hitPosition.x, hitPosition.y] != null &&
+                   ((currentPlayer.Equals(BLACK) && boardPieces[hitPosition.x, hitPosition.y].team == 1) ||
+                    (currentPlayer.Equals(WHITE) && boardPieces[hitPosition.x, hitPosition.y].team == 0)))
                 {
                     holding = boardPieces[hitPosition.x, hitPosition.y];
-
-                    // Is it your turn?
-                    //if ((currentPlayer.Equals(BLACK) && boardPieces[hitPosition.x, hitPosition.y].team == 1) ||
-                    //    (currentPlayer.Equals(WHITE) && boardPieces[hitPosition.x, hitPosition.y].team == 0))
-                    //{
-                    //    holding = boardPieces[hitPosition.x, hitPosition.y];
-                    //}
                 }
             }
-            
-            // When the mouse button is released
+
+            // Pick up piece after left click release
             if (holding != null && Input.GetMouseButtonDown(0))
             {
                 Vector2Int previousPosition = new Vector2Int(holding.currentX, holding.currentY);
 
                 bool isValid = MoveTo(holding, hitPosition.x, hitPosition.y);
 
-                // Moves the piece back if it cant be moved where you want
+                // Moves the piece back if it can't be moved where you want
                 if (!isValid)
                 {
                     holding.transform.position = FindMiddle(previousPosition.x, previousPosition.y);
@@ -265,7 +263,7 @@ public class GameBoard : MonoBehaviour
             boardPieces[x, y].transform.position = previousPosition;
 
             CheckForRectangle(x, y);
-            UpdateUI();
+            UpdateCurrentPlayer();
         }
     }
 
@@ -316,7 +314,8 @@ public class GameBoard : MonoBehaviour
                 Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
                 Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
 
-            Rectangle created = new Rectangle(
+            Rectangle created = rectangleObject.AddComponent<Rectangle>();
+            created.Create(
                     new Vector2(startCorner.currentX, startCorner.currentY),
                     new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
                     new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
@@ -326,7 +325,8 @@ public class GameBoard : MonoBehaviour
                     );
 
             // Create new rectangle object with discovered coordinates
-            rectangles.Add(created);
+            Rectangle[] storage = rectangleObject.GetComponents<Rectangle>();
+            rectangles.Add(storage[storage.Length - 1]);
 
             if (startCorner.team == 1)
             {
@@ -338,26 +338,27 @@ public class GameBoard : MonoBehaviour
             }
         }
 
-        Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
-                firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
-                secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
-                thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
+        // DEBUG CODE
+        //Debug.Log(startCorner.currentX + "; " + startCorner.currentY + "\n" +
+        //        firstFoundCorner.currentX + "; " + firstFoundCorner.currentY + "\n" +
+        //        secondFoundCorner.currentX + "; " + secondFoundCorner.currentY + "\n" +
+        //        thirdFoundCorner.currentX + "; " + thirdFoundCorner.currentY);
     }
 
-    private void UpdateUI()
+    private void UpdateCurrentPlayer()
     {
-        //if (currentPlayer.Equals("Player 1"))
-        //{
-        //    currentPlayer = WHITE;
-        //    white.gameObject.SetActive(true);
-        //    black.gameObject.SetActive(false);
-        //}
-        //else
-        //{
-        //    currentPlayer = BLACK;
-        //    white.gameObject.SetActive(false);
-        //    black.gameObject.SetActive(true);
-        //}
+        if (currentPlayer.Equals(BLACK))
+        {
+            currentPlayer = WHITE;
+            white.gameObject.SetActive(true);
+            black.gameObject.SetActive(false);
+        }
+        else if (currentPlayer.Equals(WHITE))
+        {
+            currentPlayer = BLACK;
+            white.gameObject.SetActive(false);
+            black.gameObject.SetActive(true);
+        }
     }
     #endregion
 
@@ -369,6 +370,8 @@ public class GameBoard : MonoBehaviour
     
     private bool MoveTo(BoardPieces bp, int x, int y)
     {
+        Debug.Log("Triggered");
+
         Vector2Int previousPosition = new Vector2Int(bp.currentX, bp.currentY);
         boardPieces[x, y] = bp;
         boardPieces[previousPosition.x, previousPosition.y] = null;
