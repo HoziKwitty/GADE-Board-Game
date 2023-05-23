@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3097842978965454060}
   - component: {fileID: 8229693204822698067}
   m_Layer: 0
-  m_Name: SquaresBoard
+  m_Name: Multiplayer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

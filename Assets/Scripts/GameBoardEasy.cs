@@ -1,10 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-public class GameBoard : MonoBehaviour
+public class GameBoardEasy : MonoBehaviour
 {
-    [Header("Art")] 
+    [Header("Art")]
     [SerializeField] private Material materialTexture;
     [SerializeField] private float tileSize = 1.0f;
     [SerializeField] private float yOffset = 0.2f;
@@ -42,6 +43,9 @@ public class GameBoard : MonoBehaviour
     private const string WHITE = "Player 1";
     private const string BLACK = "Player 2";
     public string currentPlayer;
+    private bool aiToPlay = false;
+
+    private int difficulty = 3;
 
     private RaycastHit info;
     private Ray ray;
@@ -51,7 +55,7 @@ public class GameBoard : MonoBehaviour
         mainCamera = Camera.main;
 
         GenerateGrid(1, tileCount_X, tileCount_Y);
-        
+
         GenerateAllSquares();
         PositionAll();
 
@@ -62,59 +66,85 @@ public class GameBoard : MonoBehaviour
     {
         ray = mainCamera.ScreenPointToRay(Input.mousePosition);
 
-        // Checks if the raycast hits something
-        if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse"))) 
+        // Check who is currently in play
+        if (currentPlayer == WHITE)
         {
-            // Gets indices of hit tiles
-            Vector2Int hitPosition = CheckTile(info.transform.gameObject);
+            // Make it look like the AI is thinking
+            StartCoroutine(ThinkAppearance());
 
-            // This value is used when the mouse wasn't over anything
-            if (mousePos == -Vector2Int.one)
+            if (aiToPlay)
             {
-                mousePos = hitPosition;
-                tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
-            }
-            
-            // This value is used when the mouse was over another tile
-            if (mousePos != hitPosition)
-            {
-                tiles[hitPosition.x,mousePos.y].layer = LayerMask.NameToLayer("BoardTile");
-                mousePos = hitPosition;
-                tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
-            }
-            
-            // Select with left click
-            if (Input.GetMouseButtonDown(0))
-            {
-                if (boardPieces[hitPosition.x, hitPosition.y] != null &&
-                   ((currentPlayer.Equals(BLACK) && boardPieces[hitPosition.x, hitPosition.y].team == 1) ||
-                    (currentPlayer.Equals(WHITE) && boardPieces[hitPosition.x, hitPosition.y].team == 0)))
-                {
-                    holding = boardPieces[hitPosition.x, hitPosition.y];
-                }
-            }
+                aiToPlay = false;
 
-            // Pick up piece after left click release
-            if (holding != null && Input.GetMouseButtonDown(0))
-            {
-                Vector2Int previousPosition = new Vector2Int(holding.currentX, holding.currentY);
-
-                bool isValid = MoveTo(holding, hitPosition.x, hitPosition.y);
-
-                // Moves the piece back if it can't be moved where you want
-                if (!isValid)
-                {
-                    holding.transform.position = FindMiddle(previousPosition.x, previousPosition.y);
-                    holding = null;
-                }
+                Minimax(difficulty);
+                // AI Logic
+                //int rnd = Random.Range(0, 2);
+                //if (rnd == 0)
+                //{
+                //    RandomMove();
+                //}
+                //else
+                //{
+                //    Minimax(difficulty);
+                //}
             }
         }
         else
         {
-            if (mousePos != -Vector2Int.one)
+            // Checks if the raycast hits something
+            if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("BoardTile", "Mouse")))
             {
-                tiles[mousePos.x, mousePos.y].layer = LayerMask.NameToLayer("BoardTile");
-                mousePos = -Vector2Int.one;
+                // Gets indices of hit tiles
+                Vector2Int hitPosition = CheckTile(info.transform.gameObject);
+
+                // This value is used when the mouse wasn't over anything
+                if (mousePos == -Vector2Int.one)
+                {
+                    mousePos = hitPosition;
+                    tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
+                }
+
+                // This value is used when the mouse was over another tile
+                if (mousePos != hitPosition)
+                {
+                    tiles[hitPosition.x, mousePos.y].layer = LayerMask.NameToLayer("BoardTile");
+                    mousePos = hitPosition;
+                    tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Mouse");
+                }
+
+                // Select with left click
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (boardPieces[hitPosition.x, hitPosition.y] != null &&
+                       ((currentPlayer.Equals(BLACK) && boardPieces[hitPosition.x, hitPosition.y].team == 1) ||
+                        (currentPlayer.Equals(WHITE) && boardPieces[hitPosition.x, hitPosition.y].team == 0)))
+                    {
+                        holding = boardPieces[hitPosition.x, hitPosition.y];
+                    }
+                }
+
+                // Pick up piece after left click release
+                if (holding != null && Input.GetMouseButtonDown(0))
+                {
+                    Vector2Int previousPosition = new Vector2Int(holding.currentX, holding.currentY);
+
+                    bool isValid = MoveTo(holding, hitPosition.x, hitPosition.y);
+
+                    // Moves the piece back if it can't be moved where you want
+                    if (!isValid)
+                    {
+                        holding.transform.position = FindMiddle(previousPosition.x, previousPosition.y);
+                        holding = null;
+                    }
+                }
+            }
+            else
+            {
+                if (mousePos != -Vector2Int.one)
+                {
+                    tiles[mousePos.x, mousePos.y].layer = LayerMask.NameToLayer("BoardTile");
+                    mousePos = -Vector2Int.one;
+                }
             }
         }
     }
@@ -124,7 +154,7 @@ public class GameBoard : MonoBehaviour
     {
         yOffset += transform.position.y;
         border = new Vector3((tileCountX / 2) * tileSize, 0, (tileCountX / 2) * tileSize) + boardCenter;
-            
+
         tiles = new GameObject[tileCountX, tileCountY];
         for (int x = 0; x < tileCountX; x++)
         {
@@ -140,32 +170,32 @@ public class GameBoard : MonoBehaviour
         GameObject tileObject = new GameObject(string.Format("X:{0}, Y:{1}", x, y));
 
         // Allows tiles to move when moving above GameObjects
-        tileObject.transform.parent = transform; 
+        tileObject.transform.parent = transform;
 
         Mesh mesh = new Mesh();
         tileObject.AddComponent<MeshFilter>().mesh = mesh;
-        
+
         // Uses material declared in header
         tileObject.AddComponent<MeshRenderer>().material = materialTexture;
 
         //generates the 4 corners of the board
-        Vector3[] vertices = new Vector3[4]; 
+        Vector3[] vertices = new Vector3[4];
         vertices[0] = new Vector3(x * tileSize, yOffset, y * tileSize) - border;
-        vertices[1] = new Vector3(x * tileSize, yOffset, (y+1) * tileSize) - border;
-        vertices[2] = new Vector3((x+1) * tileSize, yOffset, y * tileSize) - border;
-        vertices[3] = new Vector3((x+1) * tileSize, yOffset, (y+1) * tileSize) - border;
+        vertices[1] = new Vector3(x * tileSize, yOffset, (y + 1) * tileSize) - border;
+        vertices[2] = new Vector3((x + 1) * tileSize, yOffset, y * tileSize) - border;
+        vertices[3] = new Vector3((x + 1) * tileSize, yOffset, (y + 1) * tileSize) - border;
 
         // Generates 2 triangles that form the square board
-        int[] triangles = new int[] {0, 1, 2, 1, 3, 2}; 
+        int[] triangles = new int[] { 0, 1, 2, 1, 3, 2 };
 
         mesh.vertices = vertices;
         mesh.triangles = triangles;
-        
+
         mesh.RecalculateNormals();
 
         tileObject.AddComponent<BoxCollider>();
         tileObject.layer = LayerMask.NameToLayer("BoardTile");
-        
+
         return tileObject;
     }
 
@@ -237,7 +267,7 @@ public class GameBoard : MonoBehaviour
         {
             for (int y = 0; y < tileCount_Y; y++)
             {
-                if (tiles[x,y] == raycastInfo)
+                if (tiles[x, y] == raycastInfo)
                 {
                     return new Vector2Int(x, y);
                 }
@@ -245,7 +275,7 @@ public class GameBoard : MonoBehaviour
         }
 
         // Catch statement
-        return -Vector2Int.one; 
+        return -Vector2Int.one;
     }
 
     private void PositionSingle(int x, int y, bool hasMoved)
@@ -282,7 +312,7 @@ public class GameBoard : MonoBehaviour
         for (int i = 0; i < 10; i++)
         {
             // Checks vertically for a piece in line with itself
-            if (i != y && 
+            if (i != y &&
                 boardPieces[x, i] != null &&
                 boardPieces[x, i].team == startCorner.team)
             {
@@ -292,8 +322,8 @@ public class GameBoard : MonoBehaviour
                 for (int j = 0; j < 10; j++)
                 {
                     // Checks horizontally in line with the starting corner
-                    if (boardPieces[x, y] != boardPieces[j, y] && 
-                        boardPieces[j, y] != null && 
+                    if (boardPieces[x, y] != boardPieces[j, y] &&
+                        boardPieces[j, y] != null &&
                         boardPieces[j, y].team == startCorner.team)
                     {
                         secondFoundCorner = boardPieces[j, y];
@@ -310,40 +340,7 @@ public class GameBoard : MonoBehaviour
                     // Final check to see that corners line up
                     if (secondFoundCorner.currentX != -1 && secondFoundCorner.currentX == thirdFoundCorner.currentX)
                     {
-                        // Calculate rectangle's score
-                        float rectangleScore =
-                            Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
-                            Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
-
-                        // Create new rectangle based on calculated parameters
-                        Rectangle newRect = rectangleObject.AddComponent<Rectangle>();
-                        newRect.Create(
-                                new Vector2(startCorner.currentX, startCorner.currentY),
-                                new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
-                                new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
-                                new Vector2(thirdFoundCorner.currentX, thirdFoundCorner.currentY),
-                                rectangleScore,
-                                startCorner.team
-                                );
-
-                        // Create new rectangle object with discovered coordinates
-                        Rectangle[] storage = rectangleObject.GetComponents<Rectangle>();
-
-                        // Check that the rectangle hasn't been found before
-                        if (!CheckForDuplicate(newRect))
-                        {
-                            rectangles.Add(storage[storage.Length - 1]);
-
-                            // Update in-game score displays
-                            if (startCorner.team == 1)
-                            {
-                                blackScore.text += "\n" + rectangleScore;
-                            }
-                            else if (startCorner.team == 0)
-                            {
-                                whiteScore.text += "\n" + rectangleScore;
-                            }
-                        }
+                        AddRectangleToList(startCorner, firstFoundCorner, secondFoundCorner, thirdFoundCorner);
                     }
                 }
             }
@@ -354,6 +351,45 @@ public class GameBoard : MonoBehaviour
         if (CheckForGameEnd())
         {
             EndGame();
+        }
+    }
+
+    private void AddRectangleToList(BoardPieces startCorner, BoardPieces firstFoundCorner, 
+                                    BoardPieces secondFoundCorner, BoardPieces thirdFoundCorner)
+    {
+        // Calculate rectangle's score
+        float rectangleScore =
+            Mathf.Abs(startCorner.currentY - firstFoundCorner.currentY) *
+            Mathf.Abs(startCorner.currentX - secondFoundCorner.currentX);
+
+        // Create new rectangle based on calculated parameters
+        Rectangle newRect = rectangleObject.AddComponent<Rectangle>();
+        newRect.Create(
+                new Vector2(startCorner.currentX, startCorner.currentY),
+                new Vector2(firstFoundCorner.currentX, firstFoundCorner.currentY),
+                new Vector2(secondFoundCorner.currentX, secondFoundCorner.currentY),
+                new Vector2(thirdFoundCorner.currentX, thirdFoundCorner.currentY),
+                rectangleScore,
+                startCorner.team
+                );
+
+        // Create new rectangle object with discovered coordinates
+        Rectangle[] storage = rectangleObject.GetComponents<Rectangle>();
+
+        // Check that the rectangle hasn't been found before
+        if (!CheckForDuplicate(newRect))
+        {
+            rectangles.Add(storage[storage.Length - 1]);
+
+            // Update in-game score displays
+            if (startCorner.team == 1)
+            {
+                blackScore.text += "\n" + rectangleScore;
+            }
+            else if (startCorner.team == 0)
+            {
+                whiteScore.text += "\n" + rectangleScore;
+            }
         }
     }
 
@@ -484,6 +520,8 @@ public class GameBoard : MonoBehaviour
             white.gameObject.SetActive(false);
             black.gameObject.SetActive(true);
         }
+
+        aiToPlay = false;
     }
 
     private bool CheckForGameEnd()
@@ -548,7 +586,7 @@ public class GameBoard : MonoBehaviour
     {
         return new Vector3(x * tileSize, yOffset, y * tileSize) - border + new Vector3(tileSize / 2, 0, tileSize / 2);
     }
-    
+
     private bool MoveTo(BoardPieces bp, int x, int y)
     {
         Vector2Int previousPosition = new Vector2Int(bp.currentX, bp.currentY);
@@ -557,6 +595,162 @@ public class GameBoard : MonoBehaviour
         PositionSingle(x, y, true);
 
         return true;
+    }
+    #endregion
+
+    #region AI Logic
+    private IEnumerator ThinkAppearance()
+    {
+        yield return new WaitForSeconds(1f);
+        aiToPlay = true;
+    }
+
+    private void RandomMove()
+    {
+        bool hasPicked = false;
+        int x1 = 0;
+        int x2 = 10;
+        int y1 = 0;
+        int y2 = 10;
+
+        while(!hasPicked)
+        {
+            int rndY = Random.Range(y1, y2);
+            int rndX = Random.Range(x1, x2);
+
+            if (boardPieces[rndX, rndY] == null)
+            {
+                hasPicked = true;
+
+                // Check if the AI has any available pieces
+                BoardPieces bp = CheckForAvailableAIPiece();
+                if (bp != null)
+                {
+                    MoveTo(bp, rndX, rndY);
+                }
+                else
+                {
+                    EndGame();
+                }
+            }
+        }
+    }
+
+    private void Minimax(int depth)
+    {
+        // Check if the AI can complete a rectangle of its own
+        // Check if the AI can sabotage a player's rectangle
+        // Check if the AI can block a pre-existing rectangle
+        // Player a random move OR Attempt to draw a rectangle
+
+        BoardPieces bp = CheckForAvailableAIPiece();
+        if (bp == null)
+        {
+            EndGame();
+            return;
+        }
+
+        // Check if the AI can complete a rectangle of its own
+        int[] coords;
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                coords = CheckForMinimaxRectangle(i, j);
+
+                if (coords[0] != -1 && coords[1] != -1)
+                {
+                    // SUCCESS
+                    MoveTo(bp, coords[0], coords[1]);
+                    return;
+                }
+            }
+        }
+
+        // Check if the AI can sabotage a player's rectangle
+
+    }
+
+    private int[] CheckForMinimaxRectangle(int x, int y)
+    {
+        BoardPieces startCorner = boardPieces[x, y];
+        int[] returnCoords = new int[2];
+
+        if (startCorner == null)
+        {
+            return null;
+        }
+
+        BoardPieces firstFoundCorner = new BoardPieces();
+        BoardPieces secondFoundCorner = new BoardPieces();
+        BoardPieces thirdFoundCorner = new BoardPieces();
+
+        for (int i = 0; i < 10; i++)
+        {
+            // Checks vertically for a piece in line with itself
+            if (i != y &&
+                boardPieces[x, i] != null &&
+                boardPieces[x, i].team == startCorner.team)
+            {
+                firstFoundCorner = boardPieces[x, i];
+
+                // Checks horizontally for a piece in line with itself
+                for (int j = 0; j < 10; j++)
+                {
+                    // Checks horizontally in line with the starting corner
+                    if (boardPieces[x, y] != boardPieces[j, y] &&
+                        boardPieces[j, y] != null &&
+                        boardPieces[j, y].team == startCorner.team)
+                    {
+                        secondFoundCorner = boardPieces[j, y];
+                        thirdFoundCorner = boardPieces[j, i];
+
+                        if (thirdFoundCorner == null)
+                        {
+                            returnCoords[0] = j;
+                            returnCoords[1] = i;
+                            return returnCoords;
+                        }
+                    }
+
+                    // Check horizontally in line with the first valid corner found
+                    if (boardPieces[x, i] != boardPieces[j, i] &&
+                        boardPieces[j, i] != null &&
+                        boardPieces[j, i].team == startCorner.team)
+                    {
+                        thirdFoundCorner = boardPieces[j, i];
+                        secondFoundCorner = boardPieces[j, i];
+
+                        if (secondFoundCorner == null)
+                        {
+                            returnCoords[0] = j;
+                            returnCoords[1] = i;
+                            return returnCoords;
+                        }
+                    }
+                }
+            }
+        }
+
+        returnCoords[0] = -1;
+        returnCoords[1] = -1;
+        return returnCoords;
+    }
+
+    private BoardPieces CheckForAvailableAIPiece()
+    {
+        for (int i = 11; i <= 12; i++)
+        {
+            for (int j = 9; j >= 5; j--)
+            {
+                if (boardPieces[i, j] != null)
+                {
+                    return boardPieces[i, j];
+                }
+            }
+        }
+
+        return null;
     }
     #endregion
 }
