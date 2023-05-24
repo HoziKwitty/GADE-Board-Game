@@ -42,6 +42,8 @@ public class GameBoardEasy : MonoBehaviour
 
     private const string WHITE = "Player 1";
     private const string BLACK = "Player 2";
+    private const int WHITE_INT = 0;
+    private const int BLACK_INT = 1;
     public string currentPlayer;
     private bool aiToPlay = false;
 
@@ -638,6 +640,7 @@ public class GameBoardEasy : MonoBehaviour
 
     private void Minimax(int depth)
     {
+        // AI logical process:
         // Check if the AI can complete a rectangle of its own
         // Check if the AI can sabotage a player's rectangle
         // Check if the AI can block a pre-existing rectangle
@@ -651,33 +654,38 @@ public class GameBoardEasy : MonoBehaviour
         }
 
         // Check if the AI can complete a rectangle of its own
-        int[] coords;
-        for (int i = 0; i < 10; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
-                coords = CheckForMinimaxRectangle(i, j);
-
-                if (coords[0] != -1 && coords[1] != -1)
-                {
-                    // SUCCESS
-                    MoveTo(bp, coords[0], coords[1]);
-                    return;
-                }
-            }
-        }
+        AICompleteRectangle(bp, true);
 
         // Check if the AI can sabotage a player's rectangle
+        AICompleteRectangle(bp, false);
 
+        // Check if the AI can block a pre-existing rectangle
+        AIBlockRectangle(bp);
     }
 
-    private int[] CheckForMinimaxRectangle(int x, int y)
+    private int[] CheckForMinimaxRectangle(int x, int y, bool isMinimaxing)
     {
         BoardPieces startCorner = boardPieces[x, y];
         int[] returnCoords = new int[2];
 
+        int teamToCheck;
+        if (isMinimaxing)
+        {
+            teamToCheck = WHITE_INT;
+        }
+        else
+        {
+            teamToCheck = BLACK_INT;
+        }
+
         if (startCorner == null)
         {
+            returnCoords = null;
+            return null;
+        }
+        else if (startCorner.team != teamToCheck)
+        {
+            returnCoords = null;
             return null;
         }
 
@@ -690,7 +698,7 @@ public class GameBoardEasy : MonoBehaviour
             // Checks vertically for a piece in line with itself
             if (i != y &&
                 boardPieces[x, i] != null &&
-                boardPieces[x, i].team == startCorner.team)
+                boardPieces[x, i].team == teamToCheck)
             {
                 firstFoundCorner = boardPieces[x, i];
 
@@ -700,7 +708,7 @@ public class GameBoardEasy : MonoBehaviour
                     // Checks horizontally in line with the starting corner
                     if (boardPieces[x, y] != boardPieces[j, y] &&
                         boardPieces[j, y] != null &&
-                        boardPieces[j, y].team == startCorner.team)
+                        boardPieces[j, y].team == teamToCheck)
                     {
                         secondFoundCorner = boardPieces[j, y];
                         thirdFoundCorner = boardPieces[j, i];
@@ -716,7 +724,7 @@ public class GameBoardEasy : MonoBehaviour
                     // Check horizontally in line with the first valid corner found
                     if (boardPieces[x, i] != boardPieces[j, i] &&
                         boardPieces[j, i] != null &&
-                        boardPieces[j, i].team == startCorner.team)
+                        boardPieces[j, i].team == teamToCheck)
                     {
                         thirdFoundCorner = boardPieces[j, i];
                         secondFoundCorner = boardPieces[j, i];
@@ -735,6 +743,140 @@ public class GameBoardEasy : MonoBehaviour
         returnCoords[0] = -1;
         returnCoords[1] = -1;
         return returnCoords;
+    }
+
+    private void AICompleteRectangle(BoardPieces bp, bool isMinimaxing)
+    {
+        int[] coords;
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                coords = CheckForMinimaxRectangle(i, j, isMinimaxing);
+
+                if (coords != null && coords[0] > -1)
+                {
+                    // SUCCESS
+                    MoveTo(bp, coords[0], coords[1]);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void AIBlockRectangle(BoardPieces bp)
+    {
+        // DEBUG: Rectangle corner reference
+        //   1   ->   3
+        //
+        //   |        |
+        //   V        V
+        //
+        //   2   ->   4
+
+        Vector2 corner1;
+        Vector2 corner2;
+        Vector2 corner3;
+        Vector2 corner4;
+
+        float firstRangeMin;
+        float firstRangeMax;
+        float secondRangeMin;
+        float secondRangeMax;
+        float thirdRangeMin;
+        float thirdRangeMax;
+        float fourthRangeMin;
+        float fourthRangeMax;
+
+        int rndLine;
+        float rndPoint1;
+        float rndPoint2;
+        float[] coords = new float[2];
+
+        bool pointFound = false;
+
+        for (int i = 0; i < rectangles.Count; i++)
+        {
+            if (rectangles[i].team == BLACK_INT)
+            {
+                corner1 = rectangles[i].corner1;
+                corner2 = rectangles[i].corner2;
+                corner3 = rectangles[i].corner3;
+                corner4 = rectangles[i].corner4;
+
+                // Find viable ranges on the rectangle's perimeter
+                firstRangeMin = System.Math.Min(corner1.y, corner2.y);
+                firstRangeMax = System.Math.Max(corner1.y, corner2.y);
+
+                secondRangeMin = System.Math.Min(corner3.y, corner4.y);
+                secondRangeMax = System.Math.Max(corner3.y, corner4.y);
+
+                thirdRangeMin = System.Math.Min(corner1.x, corner3.x);
+                thirdRangeMax = System.Math.Max(corner1.x, corner3.x);
+
+                fourthRangeMin = System.Math.Min(corner2.x, corner4.x);
+                fourthRangeMax = System.Math.Max(corner2.x, corner4.x);
+
+                // Ensures while loop does not persist
+                int maxLoops = 30;
+                int loopCount = 0;
+                // Select a random point
+                while (!pointFound || loopCount > maxLoops)
+                {
+                    loopCount++;
+
+                    rndLine = Random.Range(0, 4);
+                    if (rndLine == 0)
+                    {
+                        rndPoint1 = Random.Range(firstRangeMin + 1, firstRangeMax);
+                        rndPoint2 = corner1.x;
+                        coords[0] = rndPoint2;
+                        coords[1] = rndPoint1;
+                    }
+                    else if (rndLine == 1)
+                    {
+                        rndPoint1 = Random.Range(secondRangeMin + 1, secondRangeMax);
+                        rndPoint2 = corner3.x;
+                        coords[0] = rndPoint2;
+                        coords[1] = rndPoint1;
+                    }
+                    else if (rndLine == 2)
+                    {
+                        rndPoint1 = Random.Range(thirdRangeMin + 1, thirdRangeMax);
+                        rndPoint2 = corner1.y;
+                        coords[0] = rndPoint1;
+                        coords[1] = rndPoint2;
+                    }
+                    else
+                    {
+                        rndPoint1 = Random.Range(fourthRangeMin + 1, fourthRangeMax);
+                        rndPoint2 = corner2.y;
+                        coords[0] = rndPoint1;
+                        coords[1] = rndPoint2;
+                    }
+
+                    if (boardPieces[(int)coords[0], (int)coords[1]] == null)
+                    {
+                        pointFound = true;
+                    }
+                    else
+                    {
+                        coords[0] = -1;
+                        coords[1] = -1;
+                    }
+                }
+            }
+
+            if (pointFound)
+            {
+                break;
+            }
+        }
+
+        if (coords[0] > -1)
+        {
+            MoveTo(bp, (int)coords[0], (int)coords[1]);
+        }
     }
 
     private BoardPieces CheckForAvailableAIPiece()
