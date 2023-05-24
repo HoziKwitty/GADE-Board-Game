@@ -48,6 +48,7 @@ public class GameBoardEasy : MonoBehaviour
     private bool aiToPlay = false;
 
     private int difficulty = 3;
+    private const float utilityCoefficientThreshold = 2.5f;
 
     private RaycastHit info;
     private Ray ray;
@@ -78,17 +79,16 @@ public class GameBoardEasy : MonoBehaviour
             {
                 aiToPlay = false;
 
-                Minimax(difficulty);
                 // AI Logic
-                //int rnd = Random.Range(0, 2);
-                //if (rnd == 0)
-                //{
-                //    RandomMove();
-                //}
-                //else
-                //{
-                //    Minimax(difficulty);
-                //}
+                int rnd = Random.Range(0, 2);
+                if (rnd == 0)
+                {
+                    RandomMove();
+                }
+                else
+                {
+                    Minimax(difficulty);
+                }
             }
         }
         else
@@ -625,7 +625,7 @@ public class GameBoardEasy : MonoBehaviour
                 hasPicked = true;
 
                 // Check if the AI has any available pieces
-                BoardPieces bp = CheckForAvailableAIPiece();
+                BoardPieces bp = AICheckForAvailablePiece();
                 if (bp != null)
                 {
                     MoveTo(bp, rndX, rndY);
@@ -640,13 +640,8 @@ public class GameBoardEasy : MonoBehaviour
 
     private void Minimax(int depth)
     {
-        // AI logical process:
-        // Check if the AI can complete a rectangle of its own
-        // Check if the AI can sabotage a player's rectangle
-        // Check if the AI can block a pre-existing rectangle
-        // Player a random move OR Attempt to draw a rectangle
-
-        BoardPieces bp = CheckForAvailableAIPiece();
+        // Check if the AI has any pieces left
+        BoardPieces bp = AICheckForAvailablePiece();
         if (bp == null)
         {
             EndGame();
@@ -654,22 +649,34 @@ public class GameBoardEasy : MonoBehaviour
         }
 
         // Check if the AI can complete a rectangle of its own
-        AICompleteRectangle(bp, true);
+        if (AICompleteRectangle(bp, true))
+        {
+            return;
+        }
 
         // Check if the AI can sabotage a player's rectangle
-        AICompleteRectangle(bp, false);
+        if (AICompleteRectangle(bp, false))
+        {
+            return;
+        }
 
         // Check if the AI can block a pre-existing rectangle
-        AIBlockRectangle(bp);
+        if (AIBlockRectangle(bp))
+        {
+            return;
+        }
+
+        // Play a random move OR Attempt to draw a rectangle
+        AILastResort(bp);
     }
 
-    private int[] CheckForMinimaxRectangle(int x, int y, bool isMinimaxing)
+    private int[] AICheckForRectangle(int x, int y, bool isCreating)
     {
         BoardPieces startCorner = boardPieces[x, y];
         int[] returnCoords = new int[2];
 
         int teamToCheck;
-        if (isMinimaxing)
+        if (isCreating)
         {
             teamToCheck = WHITE_INT;
         }
@@ -745,26 +752,180 @@ public class GameBoardEasy : MonoBehaviour
         return returnCoords;
     }
 
-    private void AICompleteRectangle(BoardPieces bp, bool isMinimaxing)
+    private bool AICheckForTwoPoints(BoardPieces bp, int x, int y, float utilityCoefficient)
     {
+        bool success = false;
+
+        BoardPieces startPoint = boardPieces[x, y];
+        BoardPieces endPoint = new BoardPieces();
+
+        int[] returnCoords = new int[2];
+        int idealLength;
+
+        for (int i = 0; i < 10; i++)
+        {
+            if (i != y &&
+                boardPieces[x, i] != null &&
+                boardPieces[x, i].team == WHITE_INT)
+            {
+                endPoint = boardPieces[x, i];
+
+                idealLength = (int)Mathf.Round(utilityCoefficient);
+                idealLength = Mathf.Clamp(idealLength, 1, 9);
+
+                int rnd = Random.Range(0, 2);
+                if (rnd == 0)
+                {
+                    if (idealLength > startPoint.currentX)
+                    {
+                        for (int j = idealLength; j >= startPoint.currentX; j--)
+                        {
+                            if (boardPieces[j, startPoint.currentY] == null)
+                            {
+                                MoveTo(bp, j, startPoint.currentY);
+                                success = true;
+                                return success;
+                            }
+                        }
+                    }
+                    else if (idealLength < startPoint.currentX)
+                    {
+                        for (int j = startPoint.currentX; j >= idealLength; j--)
+                        {
+                            if (boardPieces[j, startPoint.currentY] == null)
+                            {
+                                MoveTo(bp, j, startPoint.currentY);
+                                success = true;
+                                return success;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (idealLength > endPoint.currentX)
+                    {
+                        for (int j = idealLength; j >= endPoint.currentX; j--)
+                        {
+                            if (boardPieces[j, endPoint.currentY] == null)
+                            {
+                                MoveTo(bp, j, endPoint.currentY);
+                                success = true;
+                                return success;
+                            }
+                        }
+                    }
+                    else if (idealLength < endPoint.currentX)
+                    {
+                        for (int j = endPoint.currentX; j >= idealLength; j--)
+                        {
+                            if (boardPieces[j, endPoint.currentY] == null)
+                            {
+                                MoveTo(bp, j, endPoint.currentY);
+                                success = true;
+                                return success;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return success;
+    }
+
+    private bool AICheckForPoint(BoardPieces bp, int x, int y, float utilityCoefficient)
+    {
+        bool success = false;
+
+        BoardPieces startPoint = boardPieces[x, y];
+
+        int idealLength = (int)Mathf.Round(utilityCoefficient);
+        idealLength = Mathf.Clamp(idealLength, 1, 9);
+
+        int rnd = Random.Range(0, 2);
+        if (rnd == 0) {
+            if (idealLength > x)
+            {
+                for (int i = idealLength; i >= x; i--)
+                {
+                    if (boardPieces[i, startPoint.currentY] == null)
+                    {
+                        MoveTo(bp, i, startPoint.currentY);
+                        success = true;
+                        return success;
+                    }
+                }
+            }
+            else if (idealLength < x)
+            {
+                for (int i = x; i >= idealLength; i--)
+                {
+                    if (boardPieces[i, startPoint.currentY] == null)
+                    {
+                        MoveTo(bp, i, startPoint.currentY);
+                        success = true;
+                        return success;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (idealLength > y)
+            {
+                for (int i = idealLength; i >= y; i--)
+                {
+                    if (boardPieces[startPoint.currentX, i] == null)
+                    {
+                        MoveTo(bp, startPoint.currentX, i);
+                        success = true;
+                        return success;
+                    }
+                }
+            }
+            else if (idealLength < y)
+            {
+                for (int i = y; i >= idealLength; i--)
+                {
+                    if (boardPieces[startPoint.currentX, i] == null)
+                    {
+                        MoveTo(bp, startPoint.currentX, i);
+                        success = true;
+                        return success;
+                    }
+                }
+            }
+        }
+
+        return success;
+    }
+
+    private bool AICompleteRectangle(BoardPieces bp, bool isCreating)
+    {
+        bool success = false;
+
         int[] coords;
         for (int i = 0; i < 10; i++)
         {
             for (int j = 0; j < 10; j++)
             {
-                coords = CheckForMinimaxRectangle(i, j, isMinimaxing);
+                coords = AICheckForRectangle(i, j, isCreating);
 
                 if (coords != null && coords[0] > -1)
                 {
                     // SUCCESS
                     MoveTo(bp, coords[0], coords[1]);
-                    return;
+                    success = true;
+                    return success;
                 }
             }
         }
+
+        return success;
     }
 
-    private void AIBlockRectangle(BoardPieces bp)
+    private bool AIBlockRectangle(BoardPieces bp)
     {
         // DEBUG: Rectangle corner reference
         //   1   ->   3
@@ -773,6 +934,8 @@ public class GameBoardEasy : MonoBehaviour
         //   V        V
         //
         //   2   ->   4
+
+        bool success = false;
 
         Vector2 corner1;
         Vector2 corner2;
@@ -873,13 +1036,67 @@ public class GameBoardEasy : MonoBehaviour
             }
         }
 
-        if (coords[0] > -1)
+        if (coords[0] > -1 && boardPieces[(int)coords[0], (int)coords[1]] == null)
         {
             MoveTo(bp, (int)coords[0], (int)coords[1]);
+            success = true;
+            return success;
+        }
+
+        return success;
+    }
+
+    private void AILastResort(BoardPieces bp)
+    {
+        // Utility function
+        float utilityCoefficient = (CalculateFinalScore(true) + 1) / (CalculateFinalScore(false) + 1);
+
+        if (utilityCoefficient > utilityCoefficientThreshold)
+        {
+            RandomMove();
+        }
+        else
+        {
+            AITryDrawRectangle(bp, utilityCoefficient);
         }
     }
 
-    private BoardPieces CheckForAvailableAIPiece()
+    private void AITryDrawRectangle(BoardPieces bp, float utilityCoefficient)
+    {
+        // Check for various configurations of potential rectangles
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                if (boardPieces[i, j] != null && boardPieces[i, j].team == WHITE_INT)
+                {
+                    if (AICheckForTwoPoints(bp, i, j, utilityCoefficient))
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                if (boardPieces[i, j] != null && boardPieces[i, j].team == WHITE_INT)
+                {
+                    if (AICheckForPoint(bp, i, j, utilityCoefficient))
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // If no appropriate moves are found, play a random move
+        RandomMove();
+    }
+
+    private BoardPieces AICheckForAvailablePiece()
     {
         for (int i = 11; i <= 12; i++)
         {
