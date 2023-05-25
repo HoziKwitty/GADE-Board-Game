@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-public class GameBoardEasy : MonoBehaviour
+public class GameBoardHard : MonoBehaviour
 {
     [Header("Art")]
     [SerializeField] private Material materialTexture;
@@ -47,8 +47,15 @@ public class GameBoardEasy : MonoBehaviour
     public string currentPlayer;
     private bool aiToPlay = false;
 
-    private const int difficulty = 3;
+    private const int depth = 3;
     private const float utilityCoefficientThreshold = 5f;
+
+    public int score;
+    private const int completeScore = 10;
+    private const int blockCompleteScore = 7;
+    private const int blockScore = 4;
+    private const int defaultScore = 1;
+    private int[] bestMove = new int[2];
 
     private RaycastHit info;
     private Ray ray;
@@ -80,15 +87,7 @@ public class GameBoardEasy : MonoBehaviour
                 aiToPlay = false;
 
                 // AI Logic
-                int rnd = Random.Range(0, 5);
-                if (rnd == 0)
-                {
-                    RandomMove();
-                }
-                else
-                {
-                    Minimax(difficulty);
-                }
+                AIBestMove(true, depth);
             }
         }
         else
@@ -356,7 +355,7 @@ public class GameBoardEasy : MonoBehaviour
         }
     }
 
-    private void AddRectangleToList(BoardPieces startCorner, BoardPieces firstFoundCorner, 
+    private void AddRectangleToList(BoardPieces startCorner, BoardPieces firstFoundCorner,
                                     BoardPieces secondFoundCorner, BoardPieces thirdFoundCorner)
     {
         // Calculate rectangle's score
@@ -607,7 +606,7 @@ public class GameBoardEasy : MonoBehaviour
         aiToPlay = true;
     }
 
-    private void RandomMove()
+    private void AIRandomMove()
     {
         bool hasPicked = false;
         int x1 = 0;
@@ -615,7 +614,7 @@ public class GameBoardEasy : MonoBehaviour
         int y1 = 0;
         int y2 = 10;
 
-        while(!hasPicked)
+        while (!hasPicked)
         {
             int rndY = Random.Range(y1, y2);
             int rndX = Random.Range(x1, x2);
@@ -625,49 +624,232 @@ public class GameBoardEasy : MonoBehaviour
                 hasPicked = true;
 
                 // Check if the AI has any available pieces
-                BoardPieces bp = AICheckForAvailablePiece();
+                BoardPieces bp = CheckForAvailablePiece(false);
+                if (bp != null)
+                {
+                    MoveTo(bp, rndX, rndY);
+                }
+            }
+        }
+    }
+
+    private bool PlayerRandomMove()
+    {
+        bool hasPicked = false;
+        int x1 = 0;
+        int x2 = 10;
+        int y1 = 0;
+        int y2 = 10;
+
+        while (!hasPicked)
+        {
+            int rndY = Random.Range(y1, y2);
+            int rndX = Random.Range(x1, x2);
+
+            if (boardPieces[rndX, rndY] == null)
+            {
+                hasPicked = true;
+
+                // Check if the player has any available pieces
+                BoardPieces bp = CheckForAvailablePiece(true);
                 if (bp != null)
                 {
                     MoveTo(bp, rndX, rndY);
                 }
                 else
                 {
-                    EndGame();
+                    return hasPicked;
                 }
             }
         }
+        return hasPicked;
     }
 
-    private void Minimax(int depth)
+    private void AIBestMove(bool maximising, int depth)
     {
+        BoardPieces[,] previousState = boardPieces;
+
+        int bestScore;
+        int multiplier;
+
         // Check if the AI has any pieces left
-        BoardPieces bp = AICheckForAvailablePiece();
+        BoardPieces bp = CheckForAvailablePiece(!maximising);
         if (bp == null)
         {
-            EndGame();
             return;
         }
 
-        // Check if the AI can complete a rectangle of its own
-        if (AICompleteRectangle(bp, true))
+        // Check who is in play
+        if (maximising)
         {
-            return;
-        }
+            bestScore = -1000;
+            multiplier = -1;
 
-        // Check if the AI can sabotage a player's rectangle
-        if (AICompleteRectangle(bp, false))
+            // Check if the AI can complete a rectangle of its own
+            if (AICompleteRectangle(bp, true))
+            {
+                score = completeScore * multiplier;
+            }
+            else
+            {
+                // Check if the AI can sabotage a player's rectangle
+                if (AICompleteRectangle(bp, false))
+                {
+                    score = blockCompleteScore * multiplier;
+                }
+                else
+                {
+                    // Check if the AI can block a pre-existing rectangle
+                    if (AIBlockRectangle(bp))
+                    {
+                        score = blockScore * multiplier;
+                    }
+                    else
+                    {
+                        // Play a random move OR Attempt to draw a rectangle
+                        AILastResort(bp);
+                        score = defaultScore * multiplier;
+                    }
+                }
+            }
+        }
+        else
         {
-            return;
+            bestScore = 1000;
+            multiplier = 1;
+
+            if (!PlayerRandomMove())
+            {
+                return;
+            }
+            else
+            {
+                score = 11 + multiplier;
+            }
         }
 
-        // Check if the AI can block a pre-existing rectangle
-        if (AIBlockRectangle(bp))
+        // Tally the score
+        score += Minimax(!maximising, depth);
+
+        // Check score
+        if (maximising)
         {
-            return;
+            if (score > bestScore)
+            {
+                bestScore = score;
+            }
+        }
+        else
+        {
+            if (score < bestScore)
+            {
+                bestScore = score;
+            }
         }
 
-        // Play a random move OR Attempt to draw a rectangle
-        AILastResort(bp);
+        if (bestMove != null)
+        {
+            // Revert the board to its previous state
+            boardPieces = previousState;
+
+            // Play the best move
+            MoveTo(bp, bestMove[0], bestMove[1]);
+        }
+    }
+
+    private int Minimax(bool maximising, int depth)
+    {
+        BoardPieces[,] previousState = boardPieces;
+
+        int bestScore;
+        int multiplier;
+
+        // Check if the depth limit has been reached
+        depth--;
+        if (depth == 0)
+        {
+            return 0;
+        }
+
+        // Check if the AI has any pieces left
+        BoardPieces bp = CheckForAvailablePiece(!maximising);
+        if (bp == null)
+        {
+            return 0;
+        }
+
+        // Check who is in play
+        if (maximising)
+        {
+            bestScore = -1000;
+            multiplier = -1;
+
+            // Check if the AI can complete a rectangle of its own
+            if (AICompleteRectangle(bp, true))
+            {
+                score = completeScore * multiplier;
+            }
+            else
+            {
+                // Check if the AI can sabotage a player's rectangle
+                if (AICompleteRectangle(bp, false))
+                {
+                    score = blockCompleteScore * multiplier;
+                }
+                else
+                {
+                    // Check if the AI can block a pre-existing rectangle
+                    if (AIBlockRectangle(bp))
+                    {
+                        score = blockScore * multiplier;
+                    }
+                    else
+                    {
+                        // Play a random move OR Attempt to draw a rectangle
+                        AILastResort(bp);
+                        score = defaultScore * multiplier;
+                    }
+                }
+            }
+        }
+        else
+        {
+            bestScore = 1000;
+            multiplier = 1;
+
+            if (!PlayerRandomMove())
+            {
+                return 0;
+            }
+            else
+            {
+                score = 11 + multiplier;
+            }
+        }
+
+        // Tally the score
+        score += Minimax(!maximising, depth);
+
+        // Revert the board to its previous state
+        boardPieces = previousState;
+
+        // Check score
+        if (maximising)
+        {
+            if (score > bestScore)
+            {
+                bestScore = score;
+            }
+        }
+        else
+        {
+            if (score < bestScore)
+            {
+                bestScore = score;
+            }
+        }
+
+        return bestScore;
     }
 
     private int[] AICheckForRectangle(int x, int y, bool isCreating)
@@ -782,6 +964,8 @@ public class GameBoardEasy : MonoBehaviour
                         {
                             if (boardPieces[j, startPoint.currentY] == null)
                             {
+                                bestMove[0] = j;
+                                bestMove[1] = startPoint.currentY;
                                 MoveTo(bp, j, startPoint.currentY);
                                 success = true;
                                 return success;
@@ -794,6 +978,8 @@ public class GameBoardEasy : MonoBehaviour
                         {
                             if (boardPieces[j, startPoint.currentY] == null)
                             {
+                                bestMove[0] = j;
+                                bestMove[1] = startPoint.currentY;
                                 MoveTo(bp, j, startPoint.currentY);
                                 success = true;
                                 return success;
@@ -809,6 +995,8 @@ public class GameBoardEasy : MonoBehaviour
                         {
                             if (boardPieces[j, endPoint.currentY] == null)
                             {
+                                bestMove[0] = j;
+                                bestMove[1] = endPoint.currentY;
                                 MoveTo(bp, j, endPoint.currentY);
                                 success = true;
                                 return success;
@@ -821,6 +1009,8 @@ public class GameBoardEasy : MonoBehaviour
                         {
                             if (boardPieces[j, endPoint.currentY] == null)
                             {
+                                bestMove[0] = j;
+                                bestMove[1] = endPoint.currentY;
                                 MoveTo(bp, j, endPoint.currentY);
                                 success = true;
                                 return success;
@@ -844,13 +1034,16 @@ public class GameBoardEasy : MonoBehaviour
         idealLength = Mathf.Clamp(idealLength, 1, 9);
 
         int rnd = Random.Range(0, 2);
-        if (rnd == 0) {
+        if (rnd == 0)
+        {
             if (idealLength > x)
             {
                 for (int i = idealLength; i >= x; i--)
                 {
                     if (boardPieces[i, startPoint.currentY] == null)
                     {
+                        bestMove[0] = i;
+                        bestMove[1] = startPoint.currentY;
                         MoveTo(bp, i, startPoint.currentY);
                         success = true;
                         return success;
@@ -863,6 +1056,8 @@ public class GameBoardEasy : MonoBehaviour
                 {
                     if (boardPieces[i, startPoint.currentY] == null)
                     {
+                        bestMove[0] = i;
+                        bestMove[1] = startPoint.currentY;
                         MoveTo(bp, i, startPoint.currentY);
                         success = true;
                         return success;
@@ -878,6 +1073,8 @@ public class GameBoardEasy : MonoBehaviour
                 {
                     if (boardPieces[startPoint.currentX, i] == null)
                     {
+                        bestMove[0] = startPoint.currentX;
+                        bestMove[1] = i;
                         MoveTo(bp, startPoint.currentX, i);
                         success = true;
                         return success;
@@ -890,6 +1087,8 @@ public class GameBoardEasy : MonoBehaviour
                 {
                     if (boardPieces[startPoint.currentX, i] == null)
                     {
+                        bestMove[0] = startPoint.currentX;
+                        bestMove[1] = i;
                         MoveTo(bp, startPoint.currentX, i);
                         success = true;
                         return success;
@@ -914,7 +1113,8 @@ public class GameBoardEasy : MonoBehaviour
 
                 if (coords != null && coords[0] > -1)
                 {
-                    // SUCCESS
+                    bestMove[0] = coords[0];
+                    bestMove[1] = coords[1];
                     MoveTo(bp, coords[0], coords[1]);
                     success = true;
                     return success;
@@ -954,7 +1154,7 @@ public class GameBoardEasy : MonoBehaviour
         int rndLine;
         float rndPoint1;
         float rndPoint2;
-        float[] coords = { - 1, -1};
+        float[] coords = { -1, -1 };
 
         bool pointFound = false;
 
@@ -1038,6 +1238,8 @@ public class GameBoardEasy : MonoBehaviour
 
         if (coords[0] > -1 && boardPieces[(int)coords[0], (int)coords[1]] == null)
         {
+            bestMove[0] = (int)coords[0];
+            bestMove[1] = (int)coords[1];
             MoveTo(bp, (int)coords[0], (int)coords[1]);
             success = true;
             return success;
@@ -1053,7 +1255,7 @@ public class GameBoardEasy : MonoBehaviour
 
         if (utilityCoefficient > utilityCoefficientThreshold)
         {
-            RandomMove();
+            AIRandomMove();
         }
         else
         {
@@ -1093,14 +1295,28 @@ public class GameBoardEasy : MonoBehaviour
         }
 
         // If no appropriate moves are found, play a random move
-        RandomMove();
+        AIRandomMove();
     }
 
-    private BoardPieces AICheckForAvailablePiece()
+    private BoardPieces CheckForAvailablePiece(bool isBlack)
     {
+        int min;
+        int max;
+
+        if (isBlack)
+        {
+            min = 0;
+            max = 4;
+        }
+        else
+        {
+            min = 5;
+            max = 9;
+        }
+
         for (int i = 11; i <= 12; i++)
         {
-            for (int j = 9; j >= 5; j--)
+            for (int j = max; j >= min; j--)
             {
                 if (boardPieces[i, j] != null)
                 {
