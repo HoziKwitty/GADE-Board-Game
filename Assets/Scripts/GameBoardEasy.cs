@@ -80,15 +80,7 @@ public class GameBoardEasy : MonoBehaviour
                 aiToPlay = false;
 
                 // AI Logic
-                int rnd = Random.Range(0, 2);
-                if (rnd == 0)
-                {
-                    RandomMove();
-                }
-                else
-                {
-                    Minimax(difficulty);
-                }
+                Minimax(difficulty);
             }
         }
         else
@@ -954,7 +946,7 @@ public class GameBoardEasy : MonoBehaviour
         int rndLine;
         float rndPoint1;
         float rndPoint2;
-        float[] coords = new float[2];
+        float[] coords = { - 1, -1};
 
         bool pointFound = false;
 
