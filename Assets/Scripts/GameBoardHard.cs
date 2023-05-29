@@ -38,6 +38,8 @@ public class GameBoardHard : MonoBehaviour
 
     private Vector3 border;
     private BoardPieces[,] boardPieces;
+    private BoardPieces[,] previousState;
+    private List<BoardPieces> doNotRemove;
     private BoardPieces holding;
 
     private const string WHITE = "Player 1";
@@ -63,6 +65,7 @@ public class GameBoardHard : MonoBehaviour
     private void Awake()
     {
         mainCamera = Camera.main;
+        doNotRemove = new List<BoardPieces>();
 
         GenerateGrid(1, tileCount_X, tileCount_Y);
 
@@ -130,6 +133,7 @@ public class GameBoardHard : MonoBehaviour
                     Vector2Int previousPosition = new Vector2Int(holding.currentX, holding.currentY);
 
                     bool isValid = MoveTo(holding, hitPosition.x, hitPosition.y);
+                    doNotRemove.Add(holding);
 
                     // Moves the piece back if it can't be moved where you want
                     if (!isValid)
@@ -654,6 +658,8 @@ public class GameBoardHard : MonoBehaviour
                 BoardPieces bp = CheckForAvailablePiece(true);
                 if (bp != null)
                 {
+                    bestMove[0] = rndX;
+                    bestMove[1] = rndY;
                     MoveTo(bp, rndX, rndY);
                 }
                 else
@@ -667,9 +673,8 @@ public class GameBoardHard : MonoBehaviour
 
     private void AIBestMove(bool maximising, int depth)
     {
-        BoardPieces[,] previousState = boardPieces;
+        previousState = boardPieces;
 
-        int bestScore;
         int multiplier;
 
         // Check if the AI has any pieces left
@@ -682,7 +687,6 @@ public class GameBoardHard : MonoBehaviour
         // Check who is in play
         if (maximising)
         {
-            bestScore = -1000;
             multiplier = -1;
 
             // Check if the AI can complete a rectangle of its own
@@ -715,7 +719,6 @@ public class GameBoardHard : MonoBehaviour
         }
         else
         {
-            bestScore = 1000;
             multiplier = 1;
 
             if (!PlayerRandomMove())
@@ -724,36 +727,24 @@ public class GameBoardHard : MonoBehaviour
             }
             else
             {
-                score = 11 + multiplier;
+                score = 11 * multiplier;
             }
         }
 
         // Tally the score
         score += Minimax(!maximising, depth);
 
-        // Check score
-        if (maximising)
-        {
-            if (score > bestScore)
-            {
-                bestScore = score;
-            }
-        }
-        else
-        {
-            if (score < bestScore)
-            {
-                bestScore = score;
-            }
-        }
-
         if (bestMove != null)
         {
-            // Revert the board to its previous state
-            boardPieces = previousState;
-
             // Play the best move
             MoveTo(bp, bestMove[0], bestMove[1]);
+            doNotRemove.Add(bp);
+
+            // Revert the board to its previous state
+            ResetPieces(bp);
+
+            UpdateCurrentPlayer();
+            return;
         }
     }
 
@@ -1326,6 +1317,49 @@ public class GameBoardHard : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void ResetPieces(BoardPieces bp)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                if (!doNotRemove.Contains(boardPieces[i, j]) && boardPieces[i, j] != null)
+                {
+                    FindOpenSlot(boardPieces[i, j]);
+                }
+            }
+        }
+
+        FindOpenSlot(bp);
+    }
+
+    private void FindOpenSlot(BoardPieces bp)
+    {
+        for (int i = 11; i <= 12; i++)
+        {
+            for (int j = 0; j <= 9; j++)
+            {
+                if (boardPieces[i, j] == null)
+                {
+                    if (bp.team == WHITE_INT && j >= 5)
+                    {
+                        MoveTo(bp, i, j);
+                        Vector3 previousPos = bp.transform.position;
+                        previousPos.y -= 0.6f;
+                        bp.transform.position = previousPos;
+                    }
+                    else if (bp.team == BLACK_INT && j <= 4)
+                    {
+                        MoveTo(bp, i, j);
+                        Vector3 previousPos = bp.transform.position;
+                        previousPos.y -= 0.6f;
+                        bp.transform.position = previousPos;
+                    }
+                }
+            }
+        }
     }
     #endregion
 }

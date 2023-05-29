@@ -47,8 +47,7 @@ public class GameBoardEasy : MonoBehaviour
     public string currentPlayer;
     private bool aiToPlay = false;
 
-    private const int difficulty = 3;
-    private const float utilityCoefficientThreshold = 5f;
+    private const float utilityCoefficientThreshold = 10f;
 
     private RaycastHit info;
     private Ray ray;
@@ -80,14 +79,14 @@ public class GameBoardEasy : MonoBehaviour
                 aiToPlay = false;
 
                 // AI Logic
-                int rnd = Random.Range(0, 5);
+                int rnd = Random.Range(0, 10);
                 if (rnd == 0)
                 {
                     RandomMove();
                 }
                 else
                 {
-                    Minimax(difficulty);
+                    Minimax();
                 }
             }
         }
@@ -638,7 +637,7 @@ public class GameBoardEasy : MonoBehaviour
         }
     }
 
-    private void Minimax(int depth)
+    private void Minimax()
     {
         // Check if the AI has any pieces left
         BoardPieces bp = AICheckForAvailablePiece();
