@@ -41,6 +41,8 @@ public class GameBoard : MonoBehaviour
 
     private const string WHITE = "Player 1";
     private const string BLACK = "Player 2";
+    private const int WHITE_INT = 0;
+    private const int BLACK_INT = 1;
     public string currentPlayer;
 
     private RaycastHit info;
@@ -504,11 +506,14 @@ public class GameBoard : MonoBehaviour
 
     private void EndGame()
     {
+        whiteResult.text = "";
+        blackResult.text = "";
+
         resultsScreen.SetActive(true);
 
         for (int i = 0; i < rectangles.Count; i++)
         {
-            if (rectangles[i].team == 1)
+            if (rectangles[i].team == WHITE_INT)
             {
                 whiteResult.text += rectangles[i].score + "\n";
             }
@@ -517,7 +522,7 @@ public class GameBoard : MonoBehaviour
 
         for (int i = 0; i < rectangles.Count; i++)
         {
-            if (rectangles[i].team == 0)
+            if (rectangles[i].team == BLACK_INT)
             {
                 blackResult.text += rectangles[i].score + "\n";
             }
@@ -533,7 +538,7 @@ public class GameBoard : MonoBehaviour
 
         for (int i = 0; i < rectangles.Count; i++)
         {
-            if ((rectangles[i].team == 1 && isBlack) || (rectangles[i].team == 0 && !isBlack))
+            if ((rectangles[i].team == BLACK_INT && isBlack) || (rectangles[i].team == WHITE_INT && !isBlack))
             {
                 returnScore += rectangles[i].score;
             }
