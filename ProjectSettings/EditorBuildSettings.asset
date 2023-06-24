@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Singleplayer (Hard).unity
     guid: a7c4900ec173bea4dbe3a6edf0b5ce49
+  - enabled: 1
+    path: Assets/Scenes/Singleplayer (Expert).unity
+    guid: c6110eedc8dfc8845b88dd336daa766b
   m_configObjects: {}

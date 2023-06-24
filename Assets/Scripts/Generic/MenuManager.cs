@@ -5,16 +5,25 @@ using UnityEngine.SceneManagement;
 
 public class MenuManager : MonoBehaviour
 {
-    public void Singleplayer(bool isEasy)
+    public void Singleplayer(int type)
     {
         SceneManager.UnloadSceneAsync(SceneManager.GetActiveScene());
-        if (isEasy)
+        switch (type)
         {
-            SceneManager.LoadScene("Singleplayer (Hard)");
-        }
-        else
-        {
-            SceneManager.LoadScene("Singleplayer (Easy)");
+            case 0:
+                SceneManager.LoadScene("Singleplayer (Easy)");
+                break;
+
+            case 1:
+                SceneManager.LoadScene("Singleplayer (Hard)");
+                break;
+
+            case 2:
+                SceneManager.LoadScene("Singleplayer (Expert)");
+                break;
+
+            default:
+                break;
         }
     }
 
