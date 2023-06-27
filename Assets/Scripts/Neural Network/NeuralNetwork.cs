@@ -136,13 +136,18 @@ public class NeuralNetwork : IComparable<NeuralNetwork>
                     value += currentWeight * currentNeuron;
                 }
 
-                // Convert weight value to between -1 and 1
-                neurons[i][j] = (float)System.Math.Tanh(value);
+                // Convert weight value to between -1 and 1 with hyperbolic tangent activation
+                neurons[i][j] = (float)Math.Tanh(value);
             }
         }
 
         // Returns the output layer
         return neurons[neurons.Length - 1];
+    }
+
+    public void SGD()
+    {
+
     }
 
     /// <summary>

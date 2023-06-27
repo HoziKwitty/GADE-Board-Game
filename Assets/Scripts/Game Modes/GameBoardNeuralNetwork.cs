@@ -47,10 +47,14 @@ public class GameBoardNeuralNetwork : MonoBehaviour
     public string currentPlayer;
     private bool aiToPlay = false;
 
-    private const float utilityCoefficientThreshold = 10f;
-
     private RaycastHit info;
     private Ray ray;
+
+    private int[] netLayers = new int[] {2, 10, 10, 2};
+    private List<NeuralNetwork> networks;
+    private bool isTraining = false;
+    private int populationSize = 25;
+    private int generationNumber = 0;
 
     private void Awake()
     {
@@ -79,15 +83,7 @@ public class GameBoardNeuralNetwork : MonoBehaviour
                 aiToPlay = false;
 
                 // AI Logic
-                int rnd = Random.Range(0, 10);
-                if (rnd == 0)
-                {
-                    RandomMove();
-                }
-                else
-                {
-                    Minimax();
-                }
+                AINeuralNetworkPlay();
             }
         }
         else
@@ -259,9 +255,36 @@ public class GameBoardNeuralNetwork : MonoBehaviour
 
         return bp;
     }
+
+    /// <summary>
+    /// Instantiate ANNs for the AI to use
+    /// </summary>
+    private void CreateANNs()
+    {
+        // Check if the population size is even
+        if (populationSize % 2 != 0)
+        {
+            populationSize = 24;
+        }
+
+        networks = new List<NeuralNetwork>();
+
+        for (int i = 0; i < populationSize; i++)
+        {
+            // Initialise each neural network with some randomness
+            NeuralNetwork net = new NeuralNetwork(netLayers);
+            net.IterateNetwork();
+            networks.Add(net);
+        }
+    }
     #endregion
 
     #region Gameplay
+    /// <summary>
+    /// Get the tile that has been hit by a raycast
+    /// </summary>
+    /// <param name="raycastInfo"></param>
+    /// <returns></returns>
     private Vector2Int CheckTile(GameObject raycastInfo)
     {
         for (int x = 0; x < tileCount_X; x++)
@@ -279,6 +302,12 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         return -Vector2Int.one;
     }
 
+    /// <summary>
+    /// Position one board piece according to the selected co-ordinates
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="hasMoved"></param>
     private void PositionSingle(int x, int y, bool hasMoved)
     {
         if (boardPieces[x, y] == null)
@@ -303,6 +332,11 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Check if a rectangle has been created
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
     private void CheckForRectangle(int x, int y)
     {
         BoardPieces startCorner = boardPieces[x, y];
@@ -355,6 +389,13 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Add an existing rectangle to the list of rectangles
+    /// </summary>
+    /// <param name="startCorner"></param>
+    /// <param name="firstFoundCorner"></param>
+    /// <param name="secondFoundCorner"></param>
+    /// <param name="thirdFoundCorner"></param>
     private void AddRectangleToList(BoardPieces startCorner, BoardPieces firstFoundCorner,
                                     BoardPieces secondFoundCorner, BoardPieces thirdFoundCorner)
     {
@@ -394,6 +435,9 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Check if a rectangle has been blocked by an opponent
+    /// </summary>
     private void CheckForBlocks()
     {
         float min;
@@ -447,6 +491,16 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Check if a rectangle's specified edge has been blocked by an opponent
+    /// </summary>
+    /// <param name="rect"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="min"></param>
+    /// <param name="max"></param>
+    /// <param name="isHorizontal"></param>
+    /// <returns></returns>
     private bool CheckForEdgeBlock(Rectangle rect, float x, float y, float min, float max, bool isHorizontal)
     {
         BoardPieces piece;
@@ -473,6 +527,10 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Convert a rectangle's original score to the quartered version
+    /// </summary>
+    /// <param name="rect"></param>
     private void ConvertToBlockedScore(Rectangle rect)
     {
         float newScore = rect.score / 4f;
@@ -480,6 +538,11 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         rect.score = newScore;
     }
 
+    /// <summary>
+    /// Check for duplicate instances of the same rectangle
+    /// </summary>
+    /// <param name="rect"></param>
+    /// <returns></returns>
     private bool CheckForDuplicate(Rectangle rect)
     {
         for (int i = 0; i < rectangles.Count; i++)
@@ -492,6 +555,12 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Check if two rectangles' co-ordinates are equal to each other
+    /// </summary>
+    /// <param name="rect1"></param>
+    /// <param name="rect2"></param>
+    /// <returns></returns>
     private bool Equals(Rectangle rect1, Rectangle rect2)
     {
         if (rect1.corner1 == rect2.corner1 &&
@@ -507,6 +576,9 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update the currently active player
+    /// </summary>
     private void UpdateCurrentPlayer()
     {
         if (currentPlayer.Equals(BLACK))
@@ -525,6 +597,10 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         aiToPlay = false;
     }
 
+    /// <summary>
+    /// Check if the game has reached an end state
+    /// </summary>
+    /// <returns></returns>
     private bool CheckForGameEnd()
     {
         for (int i = 11; i < 13; i++)
@@ -541,6 +617,9 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Ends the game
+    /// </summary>
     private void EndGame()
     {
         whiteResult.text = "";
@@ -569,6 +648,11 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         Time.timeScale = 0f;
     }
 
+    /// <summary>
+    /// Calculate the final score achieved by a specified player
+    /// </summary>
+    /// <param name="isBlack"></param>
+    /// <returns></returns>
     private float CalculateFinalScore(bool isBlack)
     {
         float returnScore = 0f;
@@ -586,11 +670,24 @@ public class GameBoardNeuralNetwork : MonoBehaviour
     #endregion
 
     #region Movement
+    /// <summary>
+    /// Find the midpoint of the playable position
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
     private Vector3 FindMiddle(int x, int y)
     {
         return new Vector3(x * tileSize, yOffset, y * tileSize) - border + new Vector3(tileSize / 2, 0, tileSize / 2);
     }
 
+    /// <summary>
+    /// Move the selected board piece to a specific position
+    /// </summary>
+    /// <param name="bp"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
     private bool MoveTo(BoardPieces bp, int x, int y)
     {
         Vector2Int previousPosition = new Vector2Int(bp.currentX, bp.currentY);
@@ -609,496 +706,73 @@ public class GameBoardNeuralNetwork : MonoBehaviour
         aiToPlay = true;
     }
 
-    private void RandomMove()
+    /// <summary>
+    /// Logic used for when the AI uses a neural network
+    /// </summary>
+    private void AINeuralNetworkPlay()
     {
-        bool hasPicked = false;
-        int x1 = 0;
-        int x2 = 10;
-        int y1 = 0;
-        int y2 = 10;
-
-        while (!hasPicked)
+        if (!isTraining)
         {
-            int rndY = Random.Range(y1, y2);
-            int rndX = Random.Range(x1, x2);
-
-            if (boardPieces[rndX, rndY] == null)
+            // Check if new neural networks must be created first
+            if (generationNumber == 0)
             {
-                hasPicked = true;
+                CreateANNs();
+            }
+            else
+            {
+                //Make sure the neural networks are in order
+                networks.Sort();
 
-                // Check if the AI has any available pieces
-                BoardPieces bp = AICheckForAvailablePiece();
-                if (bp != null)
+                for (int i = 0; i < populationSize; i++)
                 {
-                    MoveTo(bp, rndX, rndY);
-                }
-                else
-                {
-                    EndGame();
+                    // Prepare to make a deep copy
+                    NeuralNetwork copy = networks[i + populationSize / 2];
+
+                    networks[i] = new NeuralNetwork(copy);
+                    networks[i].IterateNetwork();
+
+                    copy = new NeuralNetwork(copy);
+                    networks[i + populationSize / 2] = copy;
+
+                    // Reset the fitness value
+                    networks[i].Fitness = 0f;
                 }
             }
-        }
-    }
 
-    private void Minimax()
-    {
-        // Check if the AI has any pieces left
-        BoardPieces bp = AICheckForAvailablePiece();
-        if (bp == null)
-        {
-            EndGame();
-            return;
-        }
+            generationNumber++;
 
-        // Check if the AI can complete a rectangle of its own
-        if (AICompleteRectangle(bp, true))
-        {
-            return;
-        }
-
-        // Check if the AI can sabotage a player's rectangle
-        if (AICompleteRectangle(bp, false))
-        {
-            return;
-        }
-
-        // Check if the AI can block a pre-existing rectangle
-        if (AIBlockRectangle(bp))
-        {
-            return;
-        }
-
-        // Play a random move OR Attempt to draw a rectangle
-        AILastResort(bp);
-    }
-
-    private int[] AICheckForRectangle(int x, int y, bool isCreating)
-    {
-        BoardPieces startCorner = boardPieces[x, y];
-        int[] returnCoords = new int[2];
-
-        int teamToCheck;
-        if (isCreating)
-        {
-            teamToCheck = WHITE_INT;
+            isTraining = true;
         }
         else
         {
-            teamToCheck = BLACK_INT;
-        }
+            BoardPieces bp = AICheckForAvailablePiece();
 
-        if (startCorner == null)
-        {
-            returnCoords = null;
-            return null;
-        }
-        else if (startCorner.team != teamToCheck)
-        {
-            returnCoords = null;
-            return null;
-        }
-
-        BoardPieces firstFoundCorner = new BoardPieces();
-        BoardPieces secondFoundCorner = new BoardPieces();
-        BoardPieces thirdFoundCorner = new BoardPieces();
-
-        for (int i = 0; i < 10; i++)
-        {
-            // Checks vertically for a piece in line with itself
-            if (i != y &&
-                boardPieces[x, i] != null &&
-                boardPieces[x, i].team == teamToCheck)
+            if (bp == null)
             {
-                firstFoundCorner = boardPieces[x, i];
-
-                // Checks horizontally for a piece in line with itself
-                for (int j = 0; j < 10; j++)
-                {
-                    // Checks horizontally in line with the starting corner
-                    if (boardPieces[x, y] != boardPieces[j, y] &&
-                        boardPieces[j, y] != null &&
-                        boardPieces[j, y].team == teamToCheck)
-                    {
-                        secondFoundCorner = boardPieces[j, y];
-                        thirdFoundCorner = boardPieces[j, i];
-
-                        if (thirdFoundCorner == null)
-                        {
-                            returnCoords[0] = j;
-                            returnCoords[1] = i;
-                            return returnCoords;
-                        }
-                    }
-
-                    // Check horizontally in line with the first valid corner found
-                    if (boardPieces[x, i] != boardPieces[j, i] &&
-                        boardPieces[j, i] != null &&
-                        boardPieces[j, i].team == teamToCheck)
-                    {
-                        thirdFoundCorner = boardPieces[j, i];
-                        secondFoundCorner = boardPieces[j, i];
-
-                        if (secondFoundCorner == null)
-                        {
-                            returnCoords[0] = j;
-                            returnCoords[1] = i;
-                            return returnCoords;
-                        }
-                    }
-                }
+                EndGame();
             }
-        }
-
-        returnCoords[0] = -1;
-        returnCoords[1] = -1;
-        return returnCoords;
-    }
-
-    private bool AICheckForTwoPoints(BoardPieces bp, int x, int y, float utilityCoefficient)
-    {
-        bool success = false;
-
-        BoardPieces startPoint = boardPieces[x, y];
-        BoardPieces endPoint = new BoardPieces();
-
-        int[] returnCoords = new int[2];
-        int idealLength;
-
-        for (int i = 0; i < 10; i++)
-        {
-            if (i != y &&
-                boardPieces[x, i] != null &&
-                boardPieces[x, i].team == WHITE_INT)
+            else
             {
-                endPoint = boardPieces[x, i];
+                // Choose the highest ranked neural network
+                NeuralNetwork net = networks[0];
+                int x = Random.Range(0, 10);
+                int y = Random.Range(0, 10);
 
-                idealLength = (int)Mathf.Round(utilityCoefficient);
-                idealLength = Mathf.Clamp(idealLength, 1, 9);
+                // Feed the input into the neural network
+                float[] output = net.FeedForward(new float[] { x, y });
+                int output1 = (int)Mathf.Clamp(output[0], 0, 9);
+                int output2 = (int)Mathf.Clamp(output[1], 0, 9);
 
-                int rnd = Random.Range(0, 2);
-                if (rnd == 0)
-                {
-                    if (idealLength > startPoint.currentX)
-                    {
-                        for (int j = idealLength; j >= startPoint.currentX; j--)
-                        {
-                            if (boardPieces[j, startPoint.currentY] == null)
-                            {
-                                MoveTo(bp, j, startPoint.currentY);
-                                success = true;
-                                return success;
-                            }
-                        }
-                    }
-                    else if (idealLength < startPoint.currentX)
-                    {
-                        for (int j = startPoint.currentX; j >= idealLength; j--)
-                        {
-                            if (boardPieces[j, startPoint.currentY] == null)
-                            {
-                                MoveTo(bp, j, startPoint.currentY);
-                                success = true;
-                                return success;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (idealLength > endPoint.currentX)
-                    {
-                        for (int j = idealLength; j >= endPoint.currentX; j--)
-                        {
-                            if (boardPieces[j, endPoint.currentY] == null)
-                            {
-                                MoveTo(bp, j, endPoint.currentY);
-                                success = true;
-                                return success;
-                            }
-                        }
-                    }
-                    else if (idealLength < endPoint.currentX)
-                    {
-                        for (int j = endPoint.currentX; j >= idealLength; j--)
-                        {
-                            if (boardPieces[j, endPoint.currentY] == null)
-                            {
-                                MoveTo(bp, j, endPoint.currentY);
-                                success = true;
-                                return success;
-                            }
-                        }
-                    }
-                }
+                // Play a move based on the output
+                MoveTo(bp, output1, output2);
             }
-        }
-
-        return success;
-    }
-
-    private bool AICheckForPoint(BoardPieces bp, int x, int y, float utilityCoefficient)
-    {
-        bool success = false;
-
-        BoardPieces startPoint = boardPieces[x, y];
-
-        int idealLength = (int)Mathf.Round(utilityCoefficient);
-        idealLength = Mathf.Clamp(idealLength, 1, 9);
-
-        int rnd = Random.Range(0, 2);
-        if (rnd == 0)
-        {
-            if (idealLength > x)
-            {
-                for (int i = idealLength; i >= x; i--)
-                {
-                    if (boardPieces[i, startPoint.currentY] == null)
-                    {
-                        MoveTo(bp, i, startPoint.currentY);
-                        success = true;
-                        return success;
-                    }
-                }
-            }
-            else if (idealLength < x)
-            {
-                for (int i = x; i >= idealLength; i--)
-                {
-                    if (boardPieces[i, startPoint.currentY] == null)
-                    {
-                        MoveTo(bp, i, startPoint.currentY);
-                        success = true;
-                        return success;
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (idealLength > y)
-            {
-                for (int i = idealLength; i >= y; i--)
-                {
-                    if (boardPieces[startPoint.currentX, i] == null)
-                    {
-                        MoveTo(bp, startPoint.currentX, i);
-                        success = true;
-                        return success;
-                    }
-                }
-            }
-            else if (idealLength < y)
-            {
-                for (int i = y; i >= idealLength; i--)
-                {
-                    if (boardPieces[startPoint.currentX, i] == null)
-                    {
-                        MoveTo(bp, startPoint.currentX, i);
-                        success = true;
-                        return success;
-                    }
-                }
-            }
-        }
-
-        return success;
-    }
-
-    private bool AICompleteRectangle(BoardPieces bp, bool isCreating)
-    {
-        bool success = false;
-
-        int[] coords;
-        for (int i = 0; i < 10; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
-                coords = AICheckForRectangle(i, j, isCreating);
-
-                if (coords != null && coords[0] > -1)
-                {
-                    // SUCCESS
-                    MoveTo(bp, coords[0], coords[1]);
-                    success = true;
-                    return success;
-                }
-            }
-        }
-
-        return success;
-    }
-
-    private bool AIBlockRectangle(BoardPieces bp)
-    {
-        // DEBUG: Rectangle corner reference
-        //   1   ->   3
-        //
-        //   |        |
-        //   V        V
-        //
-        //   2   ->   4
-
-        bool success = false;
-
-        Vector2 corner1;
-        Vector2 corner2;
-        Vector2 corner3;
-        Vector2 corner4;
-
-        float firstRangeMin;
-        float firstRangeMax;
-        float secondRangeMin;
-        float secondRangeMax;
-        float thirdRangeMin;
-        float thirdRangeMax;
-        float fourthRangeMin;
-        float fourthRangeMax;
-
-        int rndLine;
-        float rndPoint1;
-        float rndPoint2;
-        float[] coords = { -1, -1 };
-
-        bool pointFound = false;
-
-        for (int i = 0; i < rectangles.Count; i++)
-        {
-            if (rectangles[i].team == BLACK_INT)
-            {
-                corner1 = rectangles[i].corner1;
-                corner2 = rectangles[i].corner2;
-                corner3 = rectangles[i].corner3;
-                corner4 = rectangles[i].corner4;
-
-                // Find viable ranges on the rectangle's perimeter
-                firstRangeMin = System.Math.Min(corner1.y, corner2.y);
-                firstRangeMax = System.Math.Max(corner1.y, corner2.y);
-
-                secondRangeMin = System.Math.Min(corner3.y, corner4.y);
-                secondRangeMax = System.Math.Max(corner3.y, corner4.y);
-
-                thirdRangeMin = System.Math.Min(corner1.x, corner3.x);
-                thirdRangeMax = System.Math.Max(corner1.x, corner3.x);
-
-                fourthRangeMin = System.Math.Min(corner2.x, corner4.x);
-                fourthRangeMax = System.Math.Max(corner2.x, corner4.x);
-
-                // Ensures while loop does not persist
-                int maxLoops = 30;
-                int loopCount = 0;
-                // Select a random point
-                while (!pointFound || loopCount > maxLoops)
-                {
-                    loopCount++;
-
-                    rndLine = Random.Range(0, 4);
-                    if (rndLine == 0)
-                    {
-                        rndPoint1 = Random.Range(firstRangeMin + 1, firstRangeMax);
-                        rndPoint2 = corner1.x;
-                        coords[0] = rndPoint2;
-                        coords[1] = rndPoint1;
-                    }
-                    else if (rndLine == 1)
-                    {
-                        rndPoint1 = Random.Range(secondRangeMin + 1, secondRangeMax);
-                        rndPoint2 = corner3.x;
-                        coords[0] = rndPoint2;
-                        coords[1] = rndPoint1;
-                    }
-                    else if (rndLine == 2)
-                    {
-                        rndPoint1 = Random.Range(thirdRangeMin + 1, thirdRangeMax);
-                        rndPoint2 = corner1.y;
-                        coords[0] = rndPoint1;
-                        coords[1] = rndPoint2;
-                    }
-                    else
-                    {
-                        rndPoint1 = Random.Range(fourthRangeMin + 1, fourthRangeMax);
-                        rndPoint2 = corner2.y;
-                        coords[0] = rndPoint1;
-                        coords[1] = rndPoint2;
-                    }
-
-                    if (boardPieces[(int)coords[0], (int)coords[1]] == null)
-                    {
-                        pointFound = true;
-                    }
-                    else
-                    {
-                        coords[0] = -1;
-                        coords[1] = -1;
-                    }
-                }
-            }
-
-            if (pointFound)
-            {
-                break;
-            }
-        }
-
-        if (coords[0] > -1 && boardPieces[(int)coords[0], (int)coords[1]] == null)
-        {
-            MoveTo(bp, (int)coords[0], (int)coords[1]);
-            success = true;
-            return success;
-        }
-
-        return success;
-    }
-
-    private void AILastResort(BoardPieces bp)
-    {
-        // Utility function
-        float utilityCoefficient = (CalculateFinalScore(true) + 1) / (CalculateFinalScore(false) + 1);
-
-        if (utilityCoefficient > utilityCoefficientThreshold)
-        {
-            RandomMove();
-        }
-        else
-        {
-            AITryDrawRectangle(bp, utilityCoefficient);
         }
     }
 
-    private void AITryDrawRectangle(BoardPieces bp, float utilityCoefficient)
-    {
-        // Check for various configurations of potential rectangles
-        for (int i = 0; i < 10; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
-                if (boardPieces[i, j] != null && boardPieces[i, j].team == WHITE_INT)
-                {
-                    if (AICheckForTwoPoints(bp, i, j, utilityCoefficient))
-                    {
-                        return;
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
-                if (boardPieces[i, j] != null && boardPieces[i, j].team == WHITE_INT)
-                {
-                    if (AICheckForPoint(bp, i, j, utilityCoefficient))
-                    {
-                        return;
-                    }
-                }
-            }
-        }
-
-        // If no appropriate moves are found, play a random move
-        RandomMove();
-    }
-
+    /// <summary>
+    /// Check that there are pieces available for the AI
+    /// </summary>
+    /// <returns></returns>
     private BoardPieces AICheckForAvailablePiece()
     {
         for (int i = 11; i <= 12; i++)
