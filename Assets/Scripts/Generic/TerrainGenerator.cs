@@ -10,32 +10,32 @@ public class TerrainGenerator : MonoBehaviour
 
     public float scale = 20f;
 
-    public float offsetX = 100f;
-    public float offsetY = 100f;
+    public float offX = 10f;
+    public float offY = 10f;
     
         
     private void Start()
     {
-        offsetX = Random.Range(0f, 9999f); 
-        offsetY = Random.Range(0f, 9999f);
+        offX = Random.Range(0f, 9999f); 
+        offY = Random.Range(0f, 9999f);
         Terrain terrain = GetComponent<Terrain>();
-        terrain.terrainData = GenerateTerrain(terrain.terrainData);
+        terrain.terrainData = GenTerrain(terrain.terrainData);
         
     }
     
 
-    TerrainData GenerateTerrain(TerrainData terrainData)
+    TerrainData GenTerrain(TerrainData tData)
     {
-        terrainData.heightmapResolution = width + 1;
+        tData.heightmapResolution = width + 1;
 
-        terrainData.size = new Vector3(width, depth, height);
+        tData.size = new Vector3(width, depth, height);
         
-        terrainData.SetHeights(0,0,GenerateHeights());
+        tData.SetHeights(0,0,GenHeights());
 
-        return terrainData;
+        return tData;
     }
 
-    float[,] GenerateHeights ()
+    float[,] GenHeights ()
     {
         float[,] heights = new float[width, height];
 
@@ -52,10 +52,10 @@ public class TerrainGenerator : MonoBehaviour
 
     float CalculateHeight(int x, int y)
     {
-        float xCoordinate = (float)x / width * scale + offsetX;
-        float yCoordinate = (float)y / height * scale + offsetY;
+        float xCoord = (float)x / width * scale + offX;
+        float yCoord = (float)y / height * scale + offY;
 
-        return Mathf.PerlinNoise(xCoordinate, yCoordinate);
+        return Mathf.PerlinNoise(xCoord, yCoord);
 
     }
     
